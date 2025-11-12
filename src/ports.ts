@@ -39,6 +39,8 @@ export type StorePort = Readonly<{
   append: (e: Event) => Promise<Result<void, StoreError>>;
   scan: () => Promise<Result<readonly Event[], StoreError>>;
   materialize: () => Promise<Result<GraphState, StoreError>>;
+  // Performance optimization: get just the set of existing IDs without full materialization
+  getExistingIds?: () => Promise<Result<ReadonlySet<string>, StoreError>>;
 }>;
 
 export type Env = Readonly<{ now: () => string }>;

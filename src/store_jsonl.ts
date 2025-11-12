@@ -169,5 +169,71 @@ export async function openJsonlStore(opts: JsonlStoreOptions) {
     return ok(materializeFromEvents(scanResult.value));
   }
 
-  return { append, scan, materialize } as const;
+  async function getExistingIds(): Promise<
+    Result<ReadonlySet<string>, StoreError>
+  > {
+    const ids = new Set<string>();
+
+    try {
+      const text = await Deno.readTextFile(issuesPath);
+      let lineNumber = 0;
+      for (const line of text.split("\n")) {
+        lineNumber++;
+        if (line.trim()) {
+          try {
+            const event = JSON.parse(line);
+            if (event._type === "IssueCreated" && event.issue?.id) {
+              ids.add(event.issue.id);
+            }
+          } catch (error) {
+            const reason = error instanceof Error
+              ? error.message
+              : String(error);
+            logger.error("Failed to parse event line for ID extraction", {
+              path: issuesPath,
+              line: lineNumber,
+              reason,
+            });
+            return err({
+              _type: "ParseError",
+              line: lineNumber,
+              content: line,
+              reason,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        logger.debug("Issues file not found (no IDs yet)", {
+          path: issuesPath,
+        });
+        return ok(ids);
+      }
+      if (error instanceof Deno.errors.PermissionDenied) {
+        logger.error("Permission denied reading issues file", {
+          path: issuesPath,
+        });
+        return err({
+          _type: "PermissionDenied",
+          path: issuesPath,
+          operation: "read",
+        });
+      }
+      const reason = error instanceof Error ? error.message : String(error);
+      logger.error("Failed to read issues file for ID extraction", {
+        path: issuesPath,
+        reason,
+      });
+      return err({
+        _type: "Corruption",
+        path: issuesPath,
+        reason: `Read failed: ${reason}`,
+      });
+    }
+
+    return ok(ids);
+  }
+
+  return { append, scan, materialize, getExistingIds } as const;
 }

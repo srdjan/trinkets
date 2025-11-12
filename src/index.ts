@@ -55,6 +55,16 @@ export {
 export { explainBlocked, ready } from "./query.ts";
 export { filterIssues, nextWork, ready as readyFiltered } from "./search.ts";
 
+// Performance optimizations
+export type { IndexedGraphState } from "./indexed_graph.ts";
+export { buildIndexes, indexIssueCreated } from "./indexed_graph.ts";
+export {
+  byLabel,
+  byPriority,
+  byStatus,
+  ready as readyIndexed,
+} from "./query_indexed.ts";
+
 // Store implementations
 export { openJsonlStore } from "./store_jsonl.ts";
 export { openJsonlStoreWithHeadsV2 } from "./store_jsonl_heads_v2.ts";
@@ -62,9 +72,6 @@ export { openJsonlStoreWithHeadsV2 } from "./store_jsonl_heads_v2.ts";
 // Cache implementations
 export { openKvCache } from "./cache_kv.ts";
 export { openSqliteCache } from "./cache_sqlite.ts";
-
-// HTTP adapter
-export { startHttp } from "./http_adapter.ts";
 
 // Embedding API
 export { makeTrinkets } from "./embed.ts";

@@ -31,11 +31,20 @@ export async function createIssue(
     labels?: readonly string[];
   },
 ): Promise<Result<Issue, StoreError>> {
-  const scanResult = await store.scan();
-  if (!scanResult.ok) return scanResult;
+  // Performance optimization: use getExistingIds if available (much faster)
+  let existing: Set<string>;
+  if (store.getExistingIds) {
+    const idsResult = await store.getExistingIds();
+    if (!idsResult.ok) return idsResult;
+    existing = new Set(idsResult.value);
+  } else {
+    // Fallback to full scan + materialize
+    const scanResult = await store.scan();
+    if (!scanResult.ok) return scanResult;
+    const g = materializeFromEvents(scanResult.value);
+    existing = new Set(g.issues.keys());
+  }
 
-  const g = materializeFromEvents(scanResult.value);
-  const existing = new Set(g.issues.keys());
   const now = env.now();
   const id = await newIssueId(
     `${input.title}|${now}|${Math.random()}`,
