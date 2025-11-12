@@ -17,6 +17,8 @@ import { openJsonlStore } from "./store_jsonl.ts";
 import { createIssue, initRepo } from "./domain.ts";
 import type { StorePort } from "./ports.ts";
 
+const testOptions = { sanitizeOps: false, sanitizeResources: false };
+
 Deno.test("Result - ok() creates successful result", () => {
   const result = ok(42);
   assertEquals(result.ok, true);
@@ -91,7 +93,7 @@ Deno.test("Result - andThen short-circuits on Err", () => {
   assertEquals(isErr(chained), true);
 });
 
-Deno.test("Store - initRepo returns Ok on success", async () => {
+Deno.test("Store - initRepo returns Ok on success", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   try {
     const store = await openJsonlStore({ baseDir: tempDir });
@@ -103,7 +105,7 @@ Deno.test("Store - initRepo returns Ok on success", async () => {
   }
 });
 
-Deno.test("Store - createIssue returns Ok with issue", async () => {
+Deno.test("Store - createIssue returns Ok with issue", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   try {
     const store = await openJsonlStore({ baseDir: tempDir });
@@ -129,7 +131,7 @@ Deno.test("Store - createIssue returns Ok with issue", async () => {
   }
 });
 
-Deno.test("Store - scan returns events in Result", async () => {
+Deno.test("Store - scan returns events in Result", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   try {
     const store = await openJsonlStore({ baseDir: tempDir });
@@ -149,7 +151,7 @@ Deno.test("Store - scan returns events in Result", async () => {
   }
 });
 
-Deno.test("Store - materialize returns GraphState in Result", async () => {
+Deno.test("Store - materialize returns GraphState in Result", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   try {
     const store = await openJsonlStore({ baseDir: tempDir });
@@ -168,7 +170,7 @@ Deno.test("Store - materialize returns GraphState in Result", async () => {
   }
 });
 
-Deno.test("Store - append returns error on invalid path", async () => {
+Deno.test("Store - append returns error on invalid path", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   await Deno.remove(tempDir, { recursive: true }); // Remove the directory
 

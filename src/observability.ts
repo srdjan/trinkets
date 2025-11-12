@@ -170,8 +170,8 @@ export async function instrument<T>(
       operation,
       durationMs,
       success,
-      error,
-      metadata,
+      ...(error !== undefined && { error }),
+      ...(metadata !== undefined && { metadata }),
     });
   }
 }

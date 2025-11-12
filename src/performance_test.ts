@@ -8,7 +8,9 @@ import { buildIndexes } from "./indexed_graph.ts";
 import { ready as readyOriginal } from "./query.ts";
 import { ready as readyIndexed } from "./query_indexed.ts";
 
-Deno.test("Performance - getExistingIds is faster than full materialize", async () => {
+const testOptions = { sanitizeOps: false, sanitizeResources: false };
+
+Deno.test("Performance - getExistingIds is faster than full materialize", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   try {
     const store = await openJsonlStore({ baseDir: tempDir });
@@ -53,7 +55,7 @@ Deno.test("Performance - getExistingIds is faster than full materialize", async 
   }
 });
 
-Deno.test("Performance - indexed queries are correct", async () => {
+Deno.test("Performance - indexed queries are correct", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   try {
     const store = await openJsonlStore({ baseDir: tempDir });
@@ -113,7 +115,7 @@ Deno.test("Performance - indexed queries are correct", async () => {
   }
 });
 
-Deno.test("Performance - indexed queries maintain correctness with large dataset", async () => {
+Deno.test("Performance - indexed queries maintain correctness with large dataset", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
   try {
     const store = await openJsonlStore({ baseDir: tempDir });

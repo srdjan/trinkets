@@ -102,10 +102,13 @@ export async function exportToFile(
         operation: "write",
       });
     }
-    if (error instanceof Deno.errors.NoSpace) {
+    const reason = error instanceof Error ? error.message : String(error);
+    if (
+      reason.includes("No space left") || reason.includes("ENOSPC") ||
+      reason.includes("disk full")
+    ) {
       return err({ _type: "DiskFull", path: filePath });
     }
-    const reason = error instanceof Error ? error.message : String(error);
     return err({
       _type: "Corruption",
       path: filePath,
