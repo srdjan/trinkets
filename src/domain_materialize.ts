@@ -28,7 +28,7 @@ export function applyEvent(g: GraphState, e: Event): GraphState {
           ...cur,
           status: e.status,
           updatedAt: e.at,
-          closedAt: e.status === "done" ? e.at : cur.closedAt,
+          ...(e.status === "done" && { closedAt: e.at }),
         });
       }
       break;

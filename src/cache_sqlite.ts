@@ -7,13 +7,13 @@ import type { CacheError, CachePort } from "./ports.ts";
 export function openSqliteCache(_path = ".trinkets/cache.db"): CachePort {
   let state: GraphState | null = null;
 
-  async function hydrate(): Promise<Result<GraphState | null, CacheError>> {
-    return ok(state);
+  function hydrate(): Promise<Result<GraphState | null, CacheError>> {
+    return Promise.resolve(ok(state));
   }
 
-  async function persist(g: GraphState): Promise<Result<void, CacheError>> {
+  function persist(g: GraphState): Promise<Result<void, CacheError>> {
     state = g;
-    return ok(undefined);
+    return Promise.resolve(ok(undefined));
   }
 
   return { hydrate, persist } as const;

@@ -88,11 +88,14 @@ export async function openJsonlStore(opts: JsonlStoreOptions) {
         });
         return err({ _type: "LockTimeout", path, timeoutMs: lockTimeout });
       }
-      if (error instanceof Deno.errors.NoSpace) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (
+        reason.includes("No space left") || reason.includes("ENOSPC") ||
+        reason.includes("disk full")
+      ) {
         logger.error("Disk full during append", { path });
         return err({ _type: "DiskFull", path });
       }
-      const reason = error instanceof Error ? error.message : String(error);
       logger.error("Failed to write event", { path, reason });
       return err({
         _type: "Corruption",

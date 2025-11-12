@@ -45,7 +45,7 @@ export async function createIssue(
   const issue: Issue = {
     id,
     title: input.title,
-    body: input.body,
+    ...(input.body !== undefined && { body: input.body }),
     kind: input.kind ?? "feature",
     priority: Math.max(0, Math.min(3, Math.floor(input.priority ?? 2))) as
       | 0

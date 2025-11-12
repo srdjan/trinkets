@@ -102,11 +102,14 @@ export async function openJsonlStoreWithHeadsV2(
         });
         return err({ _type: "LockTimeout", path, timeoutMs: lockTimeout });
       }
-      if (error instanceof Deno.errors.NoSpace) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (
+        reason.includes("No space left") || reason.includes("ENOSPC") ||
+        reason.includes("disk full")
+      ) {
         logger.error("Disk full during append", { path });
         return err({ _type: "DiskFull", path });
       }
-      const reason = error instanceof Error ? error.message : String(error);
       logger.error("Failed to write event", { path, reason });
       return err({
         _type: "Corruption",
@@ -485,9 +488,15 @@ async function atomicWriteState(
     try {
       await Deno.remove(stateTmp).catch(() => {});
       await Deno.remove(metaTmp).catch(() => {});
-    } catch {}
+    } catch {
+      // Ignore cleanup errors - we're already handling the original error
+    }
 
-    if (error instanceof Deno.errors.NoSpace) {
+    const reason = error instanceof Error ? error.message : String(error);
+    if (
+      reason.includes("No space left") || reason.includes("ENOSPC") ||
+      reason.includes("disk full")
+    ) {
       logger.error("Disk full writing state");
       return err({ _type: "DiskFull", path: statePath });
     }
@@ -499,7 +508,6 @@ async function atomicWriteState(
         operation: "write",
       });
     }
-    const reason = error instanceof Error ? error.message : String(error);
     logger.error("Failed to write state atomically", { reason });
     return err({
       _type: "Corruption",
