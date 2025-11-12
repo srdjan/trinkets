@@ -1,7 +1,6 @@
-
 {
   "name": "@trinkets/core",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "tasks": {
     "test": "deno test -A --fail-fast",
     "fmt": "deno fmt",
@@ -18,8 +17,6 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "lib": ["ES2022"],
-    "module": "es2022",
-    "target": "es2022"
+    "lib": ["ES2022"]
   }
 }

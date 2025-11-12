@@ -1,13 +1,14 @@
-
 # trinkets — a minimal Beads-style library (Deno + JSR)
 
-**trinkets** is a light-functional TypeScript library inspired by Steve Yegge’s Beads.
-It gives you an append-only JSONL event log and a tiny graph model for issues + links.
+**trinkets** is a light-functional TypeScript library inspired by Steve Yegge’s
+Beads. It gives you an append-only JSONL event log and a tiny graph model for
+issues + links.
 
-- Append-only events: `IssueCreated`, `IssuePatched`, `IssueStatusSet`, `LinkAdded`, `LinkRemoved`
+- Append-only events: `IssueCreated`, `IssuePatched`, `IssueStatusSet`,
+  `LinkAdded`, `LinkRemoved`
 - Dependency kinds: `blocks`, `parent-child`, `related`, `discovered-from`
 - Ready queue + next-work strategies
-- Read-only HTTP adapter with HTMX dashboard (includes a *Blocked* SSR page)
+- Read-only HTTP adapter with HTMX dashboard (includes a _Blocked_ SSR page)
 - Deno-first, published to JSR (library code)
 
 ## Quick start
@@ -22,16 +23,27 @@ deno task serve   # runs the HTTP adapter example on :8787
 ## Embedding
 
 ```ts
-import { makeTrinkets, openJsonlStoreWithHeadsV2, openKvCache } from "@trinkets/core";
+import {
+  makeTrinkets,
+  openJsonlStoreWithHeadsV2,
+  openKvCache,
+} from "@trinkets/core";
 
 const baseDir = ".trinkets";
-const store = await openJsonlStoreWithHeadsV2({ baseDir, validateEvents: true });
+const store = await openJsonlStoreWithHeadsV2({
+  baseDir,
+  validateEvents: true,
+});
 const cache = await openKvCache("trinkets", baseDir);
 
 const tr = makeTrinkets({ store, cache });
 await tr.init();
 
-const a = await tr.createIssue({ title: "Ship login", labels: ["p0"], priority: 0 });
+const a = await tr.createIssue({
+  title: "Ship login",
+  labels: ["p0"],
+  priority: 0,
+});
 const b = await tr.createIssue({ title: "Session handling", priority: 1 });
 await tr.addLink(b.id, a.id, "blocks");
 

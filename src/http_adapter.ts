@@ -1,8 +1,7 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { openJsonlStoreWithHeadsV2 } from "./store_jsonl_heads_v2.ts";
-import { ready as readyBase, explainBlocked } from "./query.ts";
-import { filterIssues, ready as readyFiltered, nextWork } from "./search.ts";
+import { explainBlocked, ready as readyBase } from "./query.ts";
+import { filterIssues, nextWork, ready as readyFiltered } from "./search.ts";
 import { openKvCache } from "./cache_kv.ts";
 
 export type HttpOptions = Readonly<{
@@ -16,29 +15,49 @@ export type HttpOptions = Readonly<{
 
 export async function startHttp(opts: HttpOptions = {}) {
   const baseDir = opts.baseDir ?? ".trinkets";
-  const store = await openJsonlStoreWithHeadsV2({ baseDir, validateEvents: !!opts.validateEvents });
-  const cache = opts.cache === "kv" ? await openKvCache("trinkets", baseDir) : null;
+  const store = await openJsonlStoreWithHeadsV2({
+    baseDir,
+    validateEvents: !!opts.validateEvents,
+  });
+  const cache = opts.cache === "kv"
+    ? await openKvCache("trinkets", baseDir)
+    : null;
 
   async function getGraph() {
-    if (cache) { const g = await cache.hydrate(); if (g) return g; }
-    const g = await store.materialize(); if (cache) await cache.persist(g); return g;
+    if (cache) {
+      const g = await cache.hydrate();
+      if (g) return g;
+    }
+    const g = await store.materialize();
+    if (cache) await cache.persist(g);
+    return g;
   }
 
   const handler = async (req: Request): Promise<Response> => {
-    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(opts.cors?.origin ?? "*") });
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: cors(opts.cors?.origin ?? "*"),
+      });
+    }
     const url = new URL(req.url);
     const g = await getGraph();
     const tag = opts.etag === "none" ? null : makeETag(g);
 
     if (tag && req.headers.get("if-none-match") === tag) {
-      return new Response(null, { status: 304, headers: { ...cors(opts.cors?.origin ?? "*"), etag: tag } });
+      return new Response(null, {
+        status: 304,
+        headers: { ...cors(opts.cors?.origin ?? "*"), etag: tag },
+      });
     }
 
     if (url.pathname === "/") return html(indexHtml(), 200, opts);
     if (url.pathname === "/ready") {
       const label = url.searchParams.get("label") ?? undefined;
       const text = url.searchParams.get("text") ?? undefined;
-      const data = label || text ? readyFiltered(g, { label, text }) : readyBase(g);
+      const data = label || text
+        ? readyFiltered(g, { label, text })
+        : readyBase(g);
       return json({ count: data.length, items: data }, 200, opts, tag);
     }
     if (url.pathname.startsWith("/issue/")) {
@@ -53,18 +72,51 @@ export async function startHttp(opts: HttpOptions = {}) {
       return json({ items: filterIssues(g, { label, text }) }, 200, opts, tag);
     }
     if (url.pathname === "/next") {
-      const strategy = (url.searchParams.get("strategy") ?? "priority-first") as any;
+      const strategy =
+        (url.searchParams.get("strategy") ?? "priority-first") as any;
       const label = url.searchParams.get("label") ?? undefined;
       const text = url.searchParams.get("text") ?? undefined;
-      return json({ item: nextWork(g, { label, text }, strategy) }, 200, opts, tag);
+      return json(
+        { item: nextWork(g, { label, text }, strategy) },
+        200,
+        opts,
+        tag,
+      );
     }
     if (url.pathname === "/graph/summary") {
-      return json({ issues: g.issues.size, edges: Array.from(g.outgoing.values()).reduce((n, arr) => n + arr.length, 0) }, 200, opts, tag);
+      return json(
+        {
+          issues: g.issues.size,
+          edges: Array.from(g.outgoing.values()).reduce(
+            (n, arr) => n + arr.length,
+            0,
+          ),
+        },
+        200,
+        opts,
+        tag,
+      );
     }
     if (url.pathname === "/blocked") {
       return html(blockedHtml(g), 200, opts);
     }
-    return json({ ok: true, endpoints: ["/", "/ready", "/issue/:id", "/search", "/next", "/graph/summary", "/blocked"] }, 200, opts, tag);
+    return json(
+      {
+        ok: true,
+        endpoints: [
+          "/",
+          "/ready",
+          "/issue/:id",
+          "/search",
+          "/next",
+          "/graph/summary",
+          "/blocked",
+        ],
+      },
+      200,
+      opts,
+      tag,
+    );
   };
 
   const port = opts.port ?? 8787;
@@ -80,15 +132,36 @@ function cors(origin: "*" | string | string[] = "*") {
     "access-control-allow-headers": "content-type",
   };
 }
-function json(data: unknown, status = 200, opts: HttpOptions, tag: string | null): Response {
-  return new Response(JSON.stringify(data, null, 2), { status, headers: { "content-type": "application/json; charset=utf-8", ...cors(opts.cors?.origin ?? "*"), ...(tag ? { etag: tag } : {}) } });
+function json(
+  data: unknown,
+  status = 200,
+  opts: HttpOptions,
+  tag: string | null,
+): Response {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...cors(opts.cors?.origin ?? "*"),
+      ...(tag ? { etag: tag } : {}),
+    },
+  });
 }
 function html(s: string, status = 200, opts: HttpOptions): Response {
-  return new Response(s, { status, headers: { "content-type": "text/html; charset=utf-8", ...cors(opts.cors?.origin ?? "*") } });
+  return new Response(s, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      ...cors(opts.cors?.origin ?? "*"),
+    },
+  });
 }
 function makeETag(g: any): string {
-  const key = `${g.issues.size}:${Array.from(g.outgoing.values()).reduce((n,a)=>n+a.length,0)}`;
-  let h = 0; for (let i = 0; i < key.length; i++) h = (h*31 + key.charCodeAt(i)) >>> 0;
+  const key = `${g.issues.size}:${
+    Array.from(g.outgoing.values()).reduce((n, a) => n + a.length, 0)
+  }`;
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return `W/"${h.toString(16)}-${key.length}"`;
 }
 function indexHtml(): string {
@@ -139,17 +212,47 @@ function indexHtml(): string {
 </body>
 </html>`;
 }
-function escapeHtml(s: string) { return s.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] as string)); }
+function escapeHtml(s: string) {
+  return s.replace(
+    /[&<>"']/g,
+    (
+      m,
+    ) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[m] as string),
+  );
+}
 function blockedHtml(g: any): string {
   const blocked: any[] = [];
   for (const issue of g.issues.values()) {
-    const blockers = (g.incoming.get(issue.id) ?? []).filter((l: any) => l.type === "blocks").map((l: any) => l.from);
-    const openBlockers = blockers.filter((bid: string) => { const up = g.issues.get(bid); return up && up.status !== "done" && up.status !== "canceled"; });
-    if (issue.status !== "done" && openBlockers.length > 0) blocked.push({ issue, blockers: openBlockers });
+    const blockers = (g.incoming.get(issue.id) ?? []).filter((l: any) =>
+      l.type === "blocks"
+    ).map((l: any) => l.from);
+    const openBlockers = blockers.filter((bid: string) => {
+      const up = g.issues.get(bid);
+      return up && up.status !== "done" && up.status !== "canceled";
+    });
+    if (issue.status !== "done" && openBlockers.length > 0) {
+      blocked.push({ issue, blockers: openBlockers });
+    }
   }
-  if (blocked.length === 0) return `<div class="card"><h2>Blocked</h2><p>None 🎉</p></div>`;
+  if (blocked.length === 0) {
+    return `<div class="card"><h2>Blocked</h2><p>None 🎉</p></div>`;
+  }
   return `<div class="card"><h2>Blocked</h2>
     <table><thead><tr><th>ID</th><th>Title</th><th>Blockers</th></tr></thead><tbody>
-      ${blocked.map(b => `<tr><td><code>${b.issue.id}</code></td><td>${escapeHtml(b.issue.title)}</td><td>${b.blockers.map((id: string) => `<code>${id}</code>`).join(", ")}</td></tr>`).join("")}
+      ${
+    blocked.map((b) =>
+      `<tr><td><code>${b.issue.id}</code></td><td>${
+        escapeHtml(b.issue.title)
+      }</td><td>${
+        b.blockers.map((id: string) => `<code>${id}</code>`).join(", ")
+      }</td></tr>`
+    ).join("")
+  }
     </tbody></table></div>`;
 }
