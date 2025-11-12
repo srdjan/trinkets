@@ -1,0 +1,25 @@
+
+{
+  "name": "@trinkets/core",
+  "version": "0.0.5",
+  "tasks": {
+    "test": "deno test -A --fail-fast",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "publish": "jsr publish",
+    "tr": "deno run -A cli/tr.ts",
+    "init-merge": "deno run -A cli/init_merge.ts",
+    "serve": "deno run -A examples/http.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "lib": ["ES2022"],
+    "module": "es2022",
+    "target": "es2022"
+  }
+}
