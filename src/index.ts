@@ -80,3 +80,39 @@ export type { EmbedOptions } from "./embed.ts";
 // Utilities
 export { newIssueId } from "./id.ts";
 export { validateGraphState, validateIssueId } from "./schemas_runtime.ts";
+
+// Production readiness (Phase 3)
+export type {
+  ObservabilityHook,
+  OperationMetrics,
+  StoreOperation,
+} from "./observability.ts";
+export type { CircuitBreakerOptions, RetryOptions } from "./retry.ts";
+export type { IntegrityIssue, IntegrityReport } from "./integrity.ts";
+export type { BackupFormat, BackupMetadata } from "./backup.ts";
+export {
+  CircuitBreaker,
+  retryable,
+  withRetry,
+  withRetryBatch,
+} from "./retry.ts";
+export {
+  consoleObservability,
+  instrument,
+  MetricsAggregator,
+  noopObservability,
+} from "./observability.ts";
+export {
+  formatIntegrityReport,
+  repairEvents,
+  verifyIntegrity,
+} from "./integrity.ts";
+export {
+  createBackup,
+  createIncrementalBackup,
+  exportToFile,
+  exportToJsonl,
+  importFromFile,
+  importFromJsonl,
+  validateBackup,
+} from "./backup.ts";
