@@ -8,7 +8,6 @@ issues + links.
   `LinkAdded`, `LinkRemoved`
 - Dependency kinds: `blocks`, `parent-child`, `related`, `discovered-from`
 - Ready queue + next-work strategies
-- Read-only HTTP adapter with HTMX dashboard (includes a _Blocked_ SSR page)
 - Deno-first, published to JSR (library code)
 
 ## Quick start
@@ -17,17 +16,30 @@ issues + links.
 deno task tr init
 deno task tr create "Do thing A" --priority 0
 deno task tr ready
-deno task serve   # runs the HTTP adapter example on :8787
 ```
+
+## Modular imports
+
+Use the new subpath exports to pull in only the slices you need in a
+server-side bundle:
+
+```ts
+import { createIssue } from "@trinkets/core/domain";
+import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
+import { openKvCache } from "@trinkets/core/cache/kv";
+import { makeTrinkets } from "@trinkets/core/embed";
+```
+
+The classic `@trinkets/core` barrel still works, but subpath imports keep Deno
+servers from loading optional utilities (retry/circuit-breaker, backup tools,
+etc.) when they are not needed.
 
 ## Embedding
 
 ```ts
-import {
-  makeTrinkets,
-  openJsonlStoreWithHeadsV2,
-  openKvCache,
-} from "@trinkets/core";
+import { makeTrinkets } from "@trinkets/core/embed";
+import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
+import { openKvCache } from "@trinkets/core/cache/kv";
 
 const baseDir = ".trinkets";
 const store = await openJsonlStoreWithHeadsV2({
@@ -51,14 +63,3 @@ console.log(await tr.ready());
 ```
 
 See the detailed [User Guide](./docs/USER_GUIDE.md).
-
-## CORS & ETag options (HTTP)
-
-```ts
-await startHttp({
-  baseDir: ".trinkets",
-  cache: "kv",
-  cors: { origin: ["https://yourapp.example", "http://localhost:5173"] }, // default "*"
-  etag: "weak", // or "none"
-});
-```

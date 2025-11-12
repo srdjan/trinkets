@@ -32,29 +32,43 @@ const candidates = await tr.ready();
 const next = await tr.nextWork({ label: "p0" }, "priority-first");
 ```
 
-## 4. Search & Next Work
+## 4. Modular imports & server wiring
+
+Use the subpath exports to keep server bundles lean and compose your own HTTP
+surface (the older `startHttp` helper has been removed). Example using the Deno
+`serve` API:
+
+```ts
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { makeTrinkets } from "@trinkets/core/embed";
+import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
+import { openKvCache } from "@trinkets/core/cache/kv";
+
+const store = await openJsonlStoreWithHeadsV2({ baseDir: ".trinkets" });
+const cache = await openKvCache("trinkets", ".trinkets");
+const tr = makeTrinkets({ store, cache });
+
+await tr.init();
+
+await serve(async (req) => {
+  const url = new URL(req.url);
+  if (url.pathname === "/ready") {
+    const readyResult = await tr.ready();
+    if (!readyResult.ok) {
+      return new Response(JSON.stringify({ error: readyResult.error }), { status: 500 });
+    }
+    return new Response(JSON.stringify(readyResult.value), {
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return new Response("ok");
+});
+```
+
+## 5. Search & Next Work
 
 - Filters: `label`, `text`, `kinds`, `priorities`
 - Strategies: `"priority-first" | "oldest-first" | "shortest-title"`
-
-## 5. HTTP adapter
-
-```ts
-import { startHttp } from "@trinkets/core";
-await startHttp({
-  baseDir: ".trinkets",
-  cache: "kv",
-  validateEvents: true,
-  cors: { origin: "*" },
-  etag: "weak",
-});
-// Visit http://localhost:8787/ for HTMX view
-// JSON: /ready, /search, /issue/:id, /next, /graph/summary
-// SSR fragment: /blocked (used by dashboard)
-```
-
-- Configurable **CORS** origins: `string | "*" | string[]`
-- **ETag** policy: `"weak"` (default) or `"none"`
 
 ## 6. Git-friendly JSONL
 

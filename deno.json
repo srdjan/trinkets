@@ -16,7 +16,24 @@
     "init-merge": "deno run -A cli/init_merge.ts"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./domain": "./src/domain.ts",
+    "./query": "./src/query.ts",
+    "./search": "./src/search.ts",
+    "./embed": "./src/embed.ts",
+    "./ports": "./src/ports.ts",
+    "./result": "./src/result.ts",
+    "./stores/jsonl": "./src/store_jsonl.ts",
+    "./stores/heads": "./src/store_jsonl_heads_v2.ts",
+    "./cache/kv": "./src/cache_kv.ts",
+    "./cache/sqlite": "./src/cache_sqlite.ts",
+    "./indexed": "./src/indexed_graph.ts",
+    "./query/indexed": "./src/query_indexed.ts",
+    "./observability": "./src/observability.ts",
+    "./retry": "./src/retry.ts",
+    "./integrity": "./src/integrity.ts",
+    "./backup": "./src/backup.ts",
+    "./schemas": "./src/schemas_runtime.ts"
   },
   "compilerOptions": {
     "strict": true,

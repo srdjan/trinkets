@@ -14,8 +14,16 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   DEBUG: 3,
 };
 
+function safeEnv(key: string): string | undefined {
+  try {
+    return Deno.env.get(key);
+  } catch {
+    return undefined;
+  }
+}
+
 function getLogLevel(): LogLevel {
-  const level = Deno.env.get("TRINKETS_LOG_LEVEL")?.toUpperCase();
+  const level = safeEnv("TRINKETS_LOG_LEVEL")?.toUpperCase();
   if (level && level in LOG_LEVELS) {
     return level as LogLevel;
   }

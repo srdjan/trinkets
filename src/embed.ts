@@ -31,40 +31,63 @@ export type EmbedOptions = Readonly<
 
 export function makeTrinkets(opts: EmbedOptions) {
   const env: Env = { now: opts.clock ?? (() => new Date().toISOString()) };
+  let inMemoryGraph: GraphState | null = null;
+  let inflightMaterialize:
+    | Promise<Result<GraphState, StoreError | CacheError>>
+    | null = null;
+
+  async function hydrateFromCache(): Promise<GraphState | null> {
+    if (!opts.cache) return null;
+    const cacheResult = await opts.cache.hydrate();
+    if (!cacheResult.ok) {
+      return null;
+    }
+    return cacheResult.value ?? null;
+  }
+
+  async function persistToCache(g: GraphState): Promise<void> {
+    if (!opts.cache) return;
+    const persistResult = await opts.cache.persist(g);
+    if (!persistResult.ok) {
+      // Best-effort cache; ignore failures so domain operations still succeed
+    }
+  }
+
+  async function materializeFresh(): Promise<
+    Result<GraphState, StoreError | CacheError>
+  > {
+    const materializeResult = await opts.store.materialize();
+    if (!materializeResult.ok) return materializeResult;
+    inMemoryGraph = materializeResult.value;
+    await persistToCache(materializeResult.value);
+    return ok(materializeResult.value);
+  }
 
   async function getGraph(): Promise<
     Result<GraphState, StoreError | CacheError>
   > {
-    if (opts.cache) {
-      const cacheResult = await opts.cache.hydrate();
-      if (!cacheResult.ok) {
-        // Cache error, fall through to materialize
-      } else if (cacheResult.value) {
-        return ok(cacheResult.value);
+    if (inMemoryGraph) return ok(inMemoryGraph);
+    if (inflightMaterialize) return inflightMaterialize;
+
+    inflightMaterialize = (async () => {
+      const cached = await hydrateFromCache();
+      if (cached) {
+        inMemoryGraph = cached;
+        return ok(cached);
       }
-    }
+      const fresh = await materializeFresh();
+      return fresh;
+    })();
 
-    const materializeResult = await opts.store.materialize();
-    if (!materializeResult.ok) return materializeResult;
-
-    if (opts.cache) {
-      const persistResult = await opts.cache.persist(materializeResult.value);
-      // Log cache persist failures but don't fail the request
-      if (!persistResult.ok) {
-        // Could log here if we had access to logger
-      }
-    }
-
-    return ok(materializeResult.value);
+    const result = await inflightMaterialize;
+    inflightMaterialize = null;
+    return result;
   }
 
   async function refresh(): Promise<Result<void, StoreError | CacheError>> {
-    if (!opts.cache) return ok(undefined);
-
-    const materializeResult = await opts.store.materialize();
-    if (!materializeResult.ok) return materializeResult;
-
-    return await opts.cache.persist(materializeResult.value);
+    const refreshed = await materializeFresh();
+    if (!refreshed.ok) return refreshed;
+    return ok(undefined);
   }
 
   return {
