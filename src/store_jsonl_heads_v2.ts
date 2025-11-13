@@ -40,12 +40,32 @@ type SerializedState = {
   outgoing: Array<[IssueId, unknown]>;
   incoming: Array<[IssueId, unknown]>;
 };
+/**
+ * Configuration options for the HeadsV2 JSONL store.
+ */
 export type JsonlHeadsStoreV2Options = Readonly<
-  { baseDir: string; validateEvents?: boolean; lockTimeoutMs?: number }
+  {
+    /** Directory for storing JSONL and cache files. */
+    baseDir: string;
+    /** Enable valibot schema validation on append (defaults to false). */
+    validateEvents?: boolean;
+    /** File lock timeout in milliseconds (defaults to 5000). */
+    lockTimeoutMs?: number;
+  }
 >;
 
 const STATE_VERSION = 1;
 
+/**
+ * Opens a high-performance JSONL store with incremental replay.
+ *
+ * Uses heads.json (byte offsets) and state.json (graph snapshot) for
+ * sub-millisecond materialization. Automatically falls back to full replay
+ * when cache is stale. Recommended for production deployments.
+ *
+ * @param opts Store configuration
+ * @returns Promise resolving to StorePort implementation
+ */
 export async function openJsonlStoreWithHeadsV2(
   opts: JsonlHeadsStoreV2Options,
 ): Promise<StorePort> {

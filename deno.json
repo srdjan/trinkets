@@ -1,6 +1,6 @@
 {
   "name": "@trinkets/core",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A lightweight event-sourced issue tracker with append-only storage, dependency graphs, and production-grade resilience features",
   "license": "MIT",
   "repository": {

@@ -17,14 +17,29 @@
 
 import type { GraphState, Issue } from "./adt.ts";
 import { ready as baseReady } from "./query.ts";
+/** Filter criteria for issue search. */
 export type SearchFilter = Readonly<
   {
+    /** Filter by a specific label */
     label?: string;
+    /** Text search in title and body (case-insensitive) */
     text?: string;
+    /** Filter by issue kinds */
     kinds?: readonly string[];
+    /** Filter by priorities (0-3) */
     priorities?: readonly number[];
   }
 >;
+
+/**
+ * Filters issues by label, text, kind, and priority.
+ *
+ * Text search is case-insensitive and matches against both title and body.
+ *
+ * @param g The graph state to query
+ * @param f The search filter criteria
+ * @returns Array of issues matching all specified filters
+ */
 export function filterIssues(g: GraphState, f: SearchFilter): readonly Issue[] {
   const t = f.text?.toLowerCase();
   const res: Issue[] = [];
@@ -41,13 +56,31 @@ export function filterIssues(g: GraphState, f: SearchFilter): readonly Issue[] {
   }
   return res;
 }
+/** Strategy for selecting the next work item. */
 export type NextStrategy = "priority-first" | "oldest-first" | "shortest-title";
+
+/**
+ * Finds ready issues (no blockers) matching the search filter.
+ *
+ * @param g The graph state to query
+ * @param f Optional search filter
+ * @returns Array of ready issues matching the filter
+ */
 export function ready(g: GraphState, f?: SearchFilter): readonly Issue[] {
   const r = baseReady(g);
   if (!f) return r;
   const set = new Set(r.map((i) => i.id));
   return filterIssues(g, f).filter((i) => set.has(i.id));
 }
+
+/**
+ * Selects the next issue to work on using a specific strategy.
+ *
+ * @param g The graph state to query
+ * @param f Optional search filter to narrow results
+ * @param s Selection strategy (defaults to "priority-first")
+ * @returns The next issue to work on, or undefined if none ready
+ */
 export function nextWork(
   g: GraphState,
   f?: SearchFilter,

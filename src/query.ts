@@ -18,6 +18,19 @@
 import type { GraphState, Issue, IssueId } from "./adt.ts";
 import { validateIssueId } from "./schemas_runtime.ts";
 
+/**
+ * Finds all issues that are ready to work on (no open blockers).
+ *
+ * An issue is ready if it's open/doing and has no blocking issues that are
+ * also open/doing. Results are sorted by priority (ascending) then creation time.
+ *
+ * @param g The graph state to query
+ * @param opts Optional filters
+ * @param opts.kinds Filter by issue kinds
+ * @param opts.priorities Filter by priorities (0-3)
+ * @param opts.label Filter by a specific label
+ * @returns Array of ready issues, sorted by priority then creation time
+ */
 export function ready(
   g: GraphState,
   opts?: {
@@ -46,6 +59,13 @@ export function ready(
   );
 }
 
+/**
+ * Returns the IDs of all issues blocking the specified issue.
+ *
+ * @param g The graph state to query
+ * @param id The issue ID to check for blockers
+ * @returns Array of issue IDs that block the given issue (empty if none or invalid ID)
+ */
 export function explainBlocked(g: GraphState, id: string): readonly string[] {
   // Validate id format before using it
   if (!validateIssueId(id)) {

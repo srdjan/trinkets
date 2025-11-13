@@ -44,10 +44,25 @@ import type { Result } from "./result.ts";
 import { ok } from "./result.ts";
 import { warn } from "./logger.ts";
 
+/**
+ * Configuration options for creating an embedded Trinkets SDK instance.
+ */
 export type EmbedOptions = Readonly<
-  { store: StorePort; cache?: CachePort | null; clock?: () => string }
+  {
+    /** Store port for event persistence (required). */
+    store: StorePort;
+    /** Optional cache port (null to disable caching). */
+    cache?: CachePort | null;
+    /** Optional custom clock for deterministic timestamps. */
+    clock?: () => string;
+  }
 >;
 
+/**
+ * The Trinkets SDK interface providing high-level operations.
+ *
+ * All mutation methods automatically refresh the cache after successful writes.
+ */
 export type Trinkets = Readonly<{
   init: () => Promise<Result<void, StoreError>>;
   getGraph: () => Promise<Result<GraphState, StoreError | CacheError>>;
@@ -84,6 +99,21 @@ export type Trinkets = Readonly<{
   ) => Promise<Result<void, StoreError | CacheError>>;
 }>;
 
+/**
+ * Creates a Trinkets SDK instance with automatic caching and state management.
+ *
+ * The SDK maintains an in-memory graph cache and deduplicates concurrent
+ * materialization requests for optimal performance.
+ *
+ * @param opts Configuration options
+ * @returns Trinkets SDK interface
+ *
+ * @example
+ * ```ts
+ * const sdk = makeTrinkets({ store, cache });
+ * const issue = await sdk.createIssue({ title: "Fix bug", priority: 0 });
+ * ```
+ */
 export function makeTrinkets(opts: EmbedOptions): Trinkets {
   const env: Env = { now: opts.clock ?? (() => new Date().toISOString()) };
   let inMemoryGraph: GraphState | null = null;

@@ -30,6 +30,27 @@ type CachedData = {
 
 const CACHE_VERSION = 1;
 
+/**
+ * Opens a Deno KV-based cache for GraphState.
+ *
+ * Provides fast in-memory caching with automatic version validation and
+ * namespacing by baseDir hash to support multiple trinkets instances.
+ * Cache entries are automatically invalidated on version mismatch or
+ * validation failures.
+ *
+ * @param name Cache namespace identifier (defaults to "trinkets")
+ * @param baseDir Optional directory path to use for cache namespacing
+ * @returns Promise resolving to CachePort implementation
+ *
+ * @example
+ * ```ts
+ * const cache = await openKvCache("my-tracker", "./.trinkets");
+ * const state = await cache.hydrate();
+ * if (state.ok && state.value) {
+ *   // Use cached state
+ * }
+ * ```
+ */
 export async function openKvCache(
   name = "trinkets",
   baseDir?: string,

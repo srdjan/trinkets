@@ -28,10 +28,29 @@ import { err, ok } from "./result.ts";
 import type { StoreError, StorePort } from "./ports.ts";
 import * as logger from "./logger.ts";
 
+/**
+ * Configuration options for the basic JSONL store.
+ */
 export type JsonlStoreOptions = Readonly<
-  { baseDir: string; validateEvents?: boolean; lockTimeoutMs?: number }
+  {
+    /** Directory for storing JSONL files. */
+    baseDir: string;
+    /** Enable valibot schema validation on append (defaults to false). */
+    validateEvents?: boolean;
+    /** File lock timeout in milliseconds (defaults to 5000). */
+    lockTimeoutMs?: number;
+  }
 >;
 
+/**
+ * Opens a basic JSONL store with full event replay.
+ *
+ * Creates two files: issues.jsonl and links.jsonl. Uses exclusive file
+ * locks for concurrent access safety. Best for small repositories.
+ *
+ * @param opts Store configuration
+ * @returns Promise resolving to StorePort implementation
+ */
 export async function openJsonlStore(
   opts: JsonlStoreOptions,
 ): Promise<StorePort> {

@@ -32,6 +32,11 @@ import { newIssueId } from "./id.ts";
 import type { Result } from "./result.ts";
 import { err, ok } from "./result.ts";
 
+/**
+ * Initializes a new trinkets repository by verifying store accessibility.
+ * @param store The store port to initialize
+ * @returns Result indicating success or store error
+ */
 export async function initRepo(
   store: StorePort,
 ): Promise<Result<void, StoreError>> {
@@ -40,6 +45,19 @@ export async function initRepo(
   return ok(undefined);
 }
 
+/**
+ * Creates a new issue with a deterministic ID and appends an IssueCreated event.
+ *
+ * @param store The store port for event persistence
+ * @param env Environment for timestamp generation
+ * @param input Issue creation parameters
+ * @param input.title The issue title (required)
+ * @param input.body Optional issue description
+ * @param input.kind Issue type (defaults to "feature")
+ * @param input.priority Priority 0-3, where 0 is highest (defaults to 2)
+ * @param input.labels Optional array of label strings
+ * @returns Result containing the created Issue or a StoreError
+ */
 export async function createIssue(
   store: StorePort,
   env: Env,
@@ -93,6 +111,17 @@ export async function createIssue(
   return ok(issue);
 }
 
+/**
+ * Creates a dependency link between two issues. Prevents self-links.
+ *
+ * @param store The store port for event persistence
+ * @param env Environment for timestamp generation
+ * @param input Link parameters
+ * @param input.from The source issue ID
+ * @param input.to The target issue ID
+ * @param input.type Link type (blocks, parent-child, related, discovered-from)
+ * @returns Result indicating success or error (including self-link validation error)
+ */
 export async function addLink(
   store: StorePort,
   env: Env,
@@ -112,6 +141,15 @@ export async function addLink(
   });
 }
 
+/**
+ * Updates an issue's status and appends an IssueStatusSet event.
+ *
+ * @param store The store port for event persistence
+ * @param env Environment for timestamp generation
+ * @param id The issue ID to update
+ * @param status The new status (open, doing, done, canceled)
+ * @returns Result indicating success or store error
+ */
 export async function setStatus(
   store: StorePort,
   env: Env,
@@ -126,6 +164,15 @@ export async function setStatus(
   });
 }
 
+/**
+ * Partially updates an issue's fields and appends an IssuePatched event.
+ *
+ * @param store The store port for event persistence
+ * @param env Environment for timestamp generation
+ * @param id The issue ID to update
+ * @param patch Partial update object (title, body, priority, labels, kind)
+ * @returns Result indicating success or store error
+ */
 export async function patchIssue(
   store: StorePort,
   env: Env,
@@ -141,6 +188,17 @@ export async function patchIssue(
     updatedAt: env.now(),
   });
 }
+
+/**
+ * Validates graph invariants including cycle detection and parent/child consistency.
+ *
+ * Checks for:
+ * - Cycles in "blocks" dependency chains
+ * - Done parents with open children
+ *
+ * @param g The graph state to validate
+ * @returns Array of error messages (empty if valid)
+ */
 export function validateInvariants(g: GraphState): readonly string[] {
   const errors: string[] = [];
   const visiting = new Set<IssueId>();
