@@ -15,17 +15,25 @@
  * Run with: deno run -A examples/kanban_board.ts
  */
 
-import { makeTrinkets } from "../src/embed.ts";
-import type { Trinkets } from "../src/embed.ts";
-import type { CachePort, CacheError, StorePort, StoreError } from "../src/ports.ts";
-import type { Event, GraphState, Issue, IssueStatus } from "../src/adt.ts";
+import { trinkets } from "../src/index.ts";
+import type {
+  CacheError,
+  CachePort,
+  Event,
+  GraphState,
+  Issue,
+  IssueStatus,
+  Result,
+  StoreError,
+  StorePort,
+  Trinkets,
+} from "../src/index.ts";
 import { materializeFromEvents } from "../src/domain_materialize.ts";
-import type { Result } from "../src/result.ts";
-import { ok } from "../src/result.ts";
 
 const clock = () => new Date().toISOString();
 
 type TrinketsError = StoreError | CacheError;
+const { ok } = trinkets.result;
 
 function expectOk<T>(result: Result<T, TrinketsError>, label: string): T {
   if (!result.ok) {
@@ -40,8 +48,7 @@ async function main() {
 
   const store = new MemoryEventStore();
   const cache = new MemoryCache();
-  const tr = makeTrinkets({ store, cache, clock });
-  expectOk(await tr.init(), "init store");
+  const tr = await trinkets.make({ store, cache, clock });
 
   const projector = new FlowProjection(store);
   const board = new KanbanBoard(tr);
@@ -86,7 +93,7 @@ async function main() {
 }
 
 /**
- * KanbanBoard orchestrates higher-level workflows on top of makeTrinkets().
+ * KanbanBoard orchestrates higher-level workflows on top of trinkets.make().
  */
 class KanbanBoard {
   constructor(private readonly tr: Trinkets) {}

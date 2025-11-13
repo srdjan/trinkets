@@ -1,10 +1,8 @@
 
 #!/usr/bin/env -S deno run -A
 import { parse } from "https://deno.land/std@0.224.0/flags/mod.ts";
-import { openJsonlStoreWithHeadsV2, initRepo, createIssue, patchIssue, setStatus, addLink } from "../src/index.ts";
+import { trinkets } from "../src/index.ts";
 import type { IssueId, IssueKind, IssueStatus, DepType } from "../src/index.ts";
-import { ready } from "../src/query.ts";
-import { validateIssueId } from "../src/schemas_runtime.ts";
 
 const args = parse(Deno.args, { alias: { p: "priority", k: "kind" }, boolean: ["json", "validate", "no-validate"] });
 const cmd = (args._[0] ?? "help").toString();
@@ -14,9 +12,11 @@ const baseDir = Deno.env.get("TRINKETS_DIR") ?? ".trinkets";
 const isMutation = ["init", "create", "update", "status", "dep"].includes(cmd);
 const _validate = isMutation ? !(args["no-validate"] === true) : !!args.validate;
 
-const store = await openJsonlStoreWithHeadsV2({ baseDir, validateEvents: _validate });
+const store = await trinkets.store.heads({ baseDir, validateEvents: _validate });
 const env = { now: () => new Date().toISOString() };
 const out = (x: unknown) => console.log(args.json ? JSON.stringify(x, null, 2) : typeof x === "string" ? x : JSON.stringify(x, null, 2));
+const domain = trinkets.domain;
+const validateId = trinkets.validate.issueId;
 
 function exitWithError(error: unknown): never {
   console.error(JSON.stringify({ error }, null, 2));
@@ -37,7 +37,7 @@ function validateDepType(type: unknown): type is DepType {
 
 switch (cmd) {
   case "init": {
-    const result = await initRepo(store);
+    const result = await domain.init(store);
     if (!result.ok) exitWithError(result.error);
     out({ ok: true, baseDir, validate: _validate });
     break;
@@ -52,7 +52,7 @@ switch (cmd) {
     const labels = ([] as string[]).concat(args.label ? (Array.isArray(args.label) ? args.label : [args.label]) : []);
     const priority = args.priority ? Number(args.priority) : 2;
 
-    const result = await createIssue(store, env, { title, body: args.body, kind, priority, labels });
+    const result = await domain.createIssue(store, env, { title, body: args.body, kind, priority, labels });
     if (!result.ok) exitWithError(result.error);
 
     out(result.value);
@@ -61,14 +61,14 @@ switch (cmd) {
   case "update": {
     const id = args._[1]?.toString();
     if (!id) exitWithError("id required");
-    if (!validateIssueId(id)) exitWithError(`Invalid issue ID: ${id}`);
+    if (!validateId(id)) exitWithError(`Invalid issue ID: ${id}`);
 
     const labels = ([] as string[]).concat(args.label ? (Array.isArray(args.label) ? args.label : [args.label]) : []);
 
     const kind = args.kind;
     if (kind && !validateKind(kind)) exitWithError(`Invalid kind: ${kind}`);
 
-    const result = await patchIssue(store, env, id as IssueId, {
+    const result = await domain.patchIssue(store, env, id as IssueId, {
       body: args.body,
       kind: kind as IssueKind | undefined,
       priority: args.priority ? Number(args.priority) : undefined,
@@ -84,10 +84,10 @@ switch (cmd) {
     const status = args._[2]?.toString();
 
     if (!id || !status) exitWithError("usage: status <id> <open|doing|done|canceled>");
-    if (!validateIssueId(id)) exitWithError(`Invalid issue ID: ${id}`);
+    if (!validateId(id)) exitWithError(`Invalid issue ID: ${id}`);
     if (!validateStatus(status)) exitWithError(`Invalid status: ${status}`);
 
-    const result = await setStatus(store, env, id as IssueId, status);
+    const result = await domain.setStatus(store, env, id as IssueId, status);
     if (!result.ok) exitWithError(result.error);
 
     out({ ok: true });
@@ -105,11 +105,11 @@ switch (cmd) {
       exitWithError("usage: dep add <from> <to> --type <blocks|parent-child|related|discovered-from>");
     }
 
-    if (!validateIssueId(from)) exitWithError(`Invalid from issue ID: ${from}`);
-    if (!validateIssueId(to)) exitWithError(`Invalid to issue ID: ${to}`);
+    if (!validateId(from)) exitWithError(`Invalid from issue ID: ${from}`);
+    if (!validateId(to)) exitWithError(`Invalid to issue ID: ${to}`);
     if (!validateDepType(type)) exitWithError(`Invalid dependency type: ${type}`);
 
-    const result = await addLink(store, env, { from: from as IssueId, to: to as IssueId, type });
+    const result = await domain.addLink(store, env, { from: from as IssueId, to: to as IssueId, type });
     if (!result.ok) exitWithError(result.error);
 
     out({ ok: true });
@@ -119,7 +119,7 @@ switch (cmd) {
     const result = await store.materialize();
     if (!result.ok) exitWithError(result.error);
 
-    const readyIssues = ready(result.value);
+    const readyIssues = trinkets.query.ready(result.value);
     out(readyIssues.map(x => ({ id: x.id, title: x.title, priority: x.priority })));
     break;
   }

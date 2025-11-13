@@ -1,6 +1,63 @@
-// Core types
-export type {
+import { makeTrinkets } from "./embed.ts";
+import type { EmbedOptions, Trinkets } from "./embed.ts";
+import { openJsonlStore } from "./store_jsonl.ts";
+import { openJsonlStoreWithHeadsV2 } from "./store_jsonl_heads_v2.ts";
+import { openKvCache } from "./cache_kv.ts";
+import { openSqliteCache } from "./cache_sqlite.ts";
+import {
+  addLink,
+  createIssue,
+  initRepo,
+  patchIssue,
+  setStatus,
+  validateInvariants,
+} from "./domain.ts";
+import { explainBlocked, ready } from "./query.ts";
+import { filterIssues, nextWork } from "./search.ts";
+import {
+  buildIndexes,
+  indexIssueCreated,
+} from "./indexed_graph.ts";
+import {
+  byLabel,
+  byPriority,
+  byStatus,
+  ready as readyIndexed,
+} from "./query_indexed.ts";
+import {
+  CircuitBreaker,
+  retryable,
+  withRetry,
+  withRetryBatch,
+} from "./retry.ts";
+import {
+  consoleObservability,
+  instrument,
+  MetricsAggregator,
+  noopObservability,
+} from "./observability.ts";
+import {
+  createBackup,
+  createIncrementalBackup,
+  exportToFile,
+  exportToJsonl,
+  importFromFile,
+  importFromJsonl,
+  validateBackup,
+} from "./backup.ts";
+import {
+  formatIntegrityReport,
+  repairEvents,
+  verifyIntegrity,
+} from "./integrity.ts";
+import { newIssueId } from "./id.ts";
+import {
+  validateGraphState,
+  validateIssueId,
+} from "./schemas_runtime.ts";
+import type {
   DepType,
+  Event,
   GraphState,
   Issue,
   IssueId,
@@ -8,12 +65,8 @@ export type {
   IssueStatus,
   Link,
 } from "./adt.ts";
-
-// Port types
-export type { CachePort, Env, StorePort } from "./ports.ts";
-
-// Error types
-export type {
+import type { CachePort, Env, StorePort } from "./ports.ts";
+import type {
   CacheError,
   ConnectionError,
   CorruptionError,
@@ -25,10 +78,16 @@ export type {
   StoreError,
   ValidationFailedError,
 } from "./ports.ts";
-
-// Result type
-export type { Err, Ok, Result } from "./result.ts";
-export {
+import type { IndexedGraphState } from "./indexed_graph.ts";
+import type {
+  ObservabilityHook,
+  OperationMetrics,
+  StoreOperation,
+} from "./observability.ts";
+import type { CircuitBreakerOptions, RetryOptions } from "./retry.ts";
+import type { IntegrityIssue, IntegrityReport } from "./integrity.ts";
+import type { BackupFormat, BackupMetadata } from "./backup.ts";
+import {
   andThen,
   err,
   isErr,
@@ -40,79 +99,172 @@ export {
   unwrapOr,
   unwrapOrElse,
 } from "./result.ts";
+import type { Err, Ok, Result } from "./result.ts";
 
-// Domain functions
-export {
-  addLink,
-  createIssue,
-  initRepo,
-  patchIssue,
-  setStatus,
-  validateInvariants,
-} from "./domain.ts";
+export type TrinketsMakeOptions = Readonly<{
+  store?: StorePort;
+  cache?: CachePort | null;
+  baseDir?: string;
+  cacheName?: string;
+  validateEvents?: boolean;
+  clock?: () => string;
+  autoInit?: boolean;
+}>;
 
-// Query functions
-export { explainBlocked, ready } from "./query.ts";
-export { filterIssues, nextWork, ready as readyFiltered } from "./search.ts";
+async function make(opts: TrinketsMakeOptions = {}): Promise<Trinkets> {
+  const baseDir = opts.baseDir ?? ".trinkets";
+  const validateEvents = opts.validateEvents ?? true;
+  const cacheName = opts.cacheName ?? "trinkets";
 
-// Performance optimizations
-export type { IndexedGraphState } from "./indexed_graph.ts";
-export { buildIndexes, indexIssueCreated } from "./indexed_graph.ts";
-export {
-  byLabel,
-  byPriority,
-  byStatus,
-  ready as readyIndexed,
-} from "./query_indexed.ts";
+  const store =
+    opts.store ??
+    await openJsonlStoreWithHeadsV2({
+      baseDir,
+      validateEvents,
+    });
 
-// Store implementations
-export { openJsonlStore } from "./store_jsonl.ts";
-export { openJsonlStoreWithHeadsV2 } from "./store_jsonl_heads_v2.ts";
+  const resolvedCache: CachePort | null | undefined =
+    opts.cache === undefined
+      ? await openKvCache(cacheName, baseDir)
+      : opts.cache;
 
-// Cache implementations
-export { openKvCache } from "./cache_kv.ts";
-export { openSqliteCache } from "./cache_sqlite.ts";
+  const embedOptions: EmbedOptions = {
+    store,
+    ...(resolvedCache !== undefined ? { cache: resolvedCache } : {}),
+    ...(opts.clock ? { clock: opts.clock } : {}),
+  };
 
-// Embedding API
-export { makeTrinkets } from "./embed.ts";
-export type { EmbedOptions } from "./embed.ts";
+  const instance = makeTrinkets(embedOptions);
 
-// Utilities
-export { newIssueId } from "./id.ts";
-export { validateGraphState, validateIssueId } from "./schemas_runtime.ts";
+  if (opts.autoInit ?? true) {
+    const initResult = await instance.init();
+    if (!initResult.ok) {
+      throw initResult.error;
+    }
+  }
 
-// Production readiness (Phase 3)
+  return instance;
+}
+
+export const trinkets = {
+  make,
+  embed: makeTrinkets,
+  store: {
+    jsonl: openJsonlStore,
+    heads: openJsonlStoreWithHeadsV2,
+  },
+  cache: {
+    kv: openKvCache,
+    sqlite: openSqliteCache,
+  },
+  domain: {
+    init: initRepo,
+    createIssue,
+    patchIssue,
+    setStatus,
+    addLink,
+    validateInvariants,
+  },
+  query: {
+    ready,
+    explainBlocked,
+  },
+  search: {
+    nextWork,
+    filterIssues,
+  },
+  indexed: {
+    build: buildIndexes,
+    indexIssueCreated,
+    ready: readyIndexed,
+    byLabel,
+    byPriority,
+    byStatus,
+  },
+  ids: {
+    newIssueId,
+  },
+  validate: {
+    graph: validateGraphState,
+    issueId: validateIssueId,
+  },
+  result: {
+    ok,
+    err,
+    andThen,
+    isOk,
+    isErr,
+    map,
+    mapErr,
+    unwrap,
+    unwrapOr,
+    unwrapOrElse,
+  },
+  infra: {
+    retry: {
+      retryable,
+      withRetry,
+      withRetryBatch,
+      CircuitBreaker,
+    },
+    observability: {
+      instrument,
+      console: consoleObservability,
+      metrics: MetricsAggregator,
+      noop: noopObservability,
+    },
+    backup: {
+      create: createBackup,
+      incremental: createIncrementalBackup,
+      exportToFile,
+      exportToJsonl,
+      importFromFile,
+      importFromJsonl,
+      validate: validateBackup,
+    },
+    integrity: {
+      verify: verifyIntegrity,
+      repair: repairEvents,
+      formatReport: formatIntegrityReport,
+    },
+  },
+} as const;
+
 export type {
+  BackupFormat,
+  BackupMetadata,
+  CacheError,
+  CachePort,
+  CircuitBreakerOptions,
+  ConnectionError,
+  CorruptionError,
+  DepType,
+  Event,
+  DiskFullError,
+  EmbedOptions,
+  Env,
+  Err,
+  GraphState,
+  IndexedGraphState,
+  IntegrityIssue,
+  IntegrityReport,
+  Issue,
+  IssueId,
+  IssueKind,
+  IssueStatus,
+  Link,
+  LockTimeoutError,
   ObservabilityHook,
+  Ok,
   OperationMetrics,
+  ParseError,
+  PermissionDeniedError,
+  Result,
+  RetryOptions,
+  SerializationError,
+  StoreError,
   StoreOperation,
-} from "./observability.ts";
-export type { CircuitBreakerOptions, RetryOptions } from "./retry.ts";
-export type { IntegrityIssue, IntegrityReport } from "./integrity.ts";
-export type { BackupFormat, BackupMetadata } from "./backup.ts";
-export {
-  CircuitBreaker,
-  retryable,
-  withRetry,
-  withRetryBatch,
-} from "./retry.ts";
-export {
-  consoleObservability,
-  instrument,
-  MetricsAggregator,
-  noopObservability,
-} from "./observability.ts";
-export {
-  formatIntegrityReport,
-  repairEvents,
-  verifyIntegrity,
-} from "./integrity.ts";
-export {
-  createBackup,
-  createIncrementalBackup,
-  exportToFile,
-  exportToJsonl,
-  importFromFile,
-  importFromJsonl,
-  validateBackup,
-} from "./backup.ts";
+  StorePort,
+  Trinkets,
+  ValidationFailedError,
+};

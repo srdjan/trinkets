@@ -2,7 +2,7 @@
  * Basic Embed Example
  *
  * This "Basic" scenario shows how to embed trinkets directly into an
- * application using the makeTrinkets() API. You will:
+ * application using the trinkets.make() API. You will:
  *   1. Initialize the event log
  *   2. Create a few stories (issues)
  *   3. Move work across workflow states
@@ -11,11 +11,15 @@
  * Run with: deno run -A examples/basic_embed.ts
  */
 
-import { makeTrinkets } from "../src/embed.ts";
-import { openJsonlStore } from "../src/store_jsonl.ts";
-import type { CacheError, StoreError } from "../src/ports.ts";
-import type { Result } from "../src/result.ts";
-import type { Issue, IssueStatus } from "../src/adt.ts";
+import { trinkets } from "../src/index.ts";
+import type {
+  CacheError,
+  Issue,
+  IssueStatus,
+  Result,
+  StoreError,
+  Trinkets,
+} from "../src/index.ts";
 
 const clock = () => new Date().toISOString();
 type TrinketsError = StoreError | CacheError;
@@ -32,10 +36,7 @@ async function main() {
   console.log("🚀 Trinkets Basic Embed Example\n");
 
   const baseDir = await Deno.makeTempDir({ prefix: "tr-basic" });
-  const store = await openJsonlStore({ baseDir, validateEvents: true });
-  const tr = makeTrinkets({ store, clock });
-
-  expectOk(await tr.init(), "init repository");
+  const tr = await trinkets.make({ baseDir, cache: null, clock });
 
   // Create a trio of stories with different priorities and kinds
   const checkout = expectOk(
@@ -78,7 +79,7 @@ async function main() {
   expectOk(await tr.setStatus(bugfix.id, "done"), "finish bugfix");
   console.log(`🐛 ${bugfix.title} resolved\n`);
 
-  // Ask makeTrinkets for the next story using built-in strategies
+  // Ask trinkets.make() for the next story using built-in strategies
   const next = expectOk(
     await tr.nextWork({ priorities: [0, 1] }, "priority-first"),
     "next work",
@@ -95,7 +96,7 @@ async function main() {
   await Deno.remove(baseDir, { recursive: true });
 }
 
-async function printReady(tr: ReturnType<typeof makeTrinkets>, label: string) {
+async function printReady(tr: Trinkets, label: string) {
   const ready = expectOk(await tr.ready(), "ready queue");
   console.log(`📬 ${label}: ${ready.length} stories ready for pickup`);
   for (const issue of ready) {
@@ -104,7 +105,7 @@ async function printReady(tr: ReturnType<typeof makeTrinkets>, label: string) {
   console.log();
 }
 
-async function printBoard(tr: ReturnType<typeof makeTrinkets>) {
+async function printBoard(tr: Trinkets) {
   const graph = expectOk(await tr.getGraph(), "load graph");
   const columns: Record<IssueStatus, Issue[]> = {
     open: [],

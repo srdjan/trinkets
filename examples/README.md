@@ -2,12 +2,12 @@
 
 These runnable scripts demonstrate how to embed trinkets as a Beads-style event
 log instead of relying on the `tr` CLI. Every example uses the
-`makeTrinkets()` API and can be executed with Deno v2.5.6+.
+`trinkets.make()` API and can be executed with Deno v2.5.6+.
 
-> Run any scenario with: `deno run -A examples/<file>.ts`
+> Run any scenario with: `deno run -A examples/<file>.ts` (or `deno task demo` for the basic walkthrough)
 
 ## Basic — `basic_embed.ts`
-- Initialize a JSONL store and hydrate `makeTrinkets()`
+- Initialize a JSONL store and hydrate `trinkets.make()`
 - Create issues, move them through `open → doing → done`
 - Ask the ready queue and `nextWork()` strategy for the next story
 - Render a simple board grouped by status

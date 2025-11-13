@@ -9,7 +9,7 @@ invoking the `tr` CLI.
 
 1. **Event sourced:** Every change appends an event (`IssueCreated`, `LinkAdded`,
    etc.) to JSONL files inside your repo.
-2. **Graph-first:** `makeTrinkets()` keeps a hydrated graph in memory (and
+2. **Graph-first:** `trinkets.make()` keeps a hydrated graph in memory (and
    optionally cache) so you can query ready work instantly.
 3. **Drop-in:** Stores and caches are simple ports. Swap in JSONL, Heads V2, or a
    custom implementation without changing the rest of your code.
@@ -22,13 +22,12 @@ Goal: create issues, update status, and ask for the next task using the highest
 level abstraction.
 
 ```ts
-import { makeTrinkets } from "@trinkets/core/embed";
-import { openJsonlStore } from "@trinkets/core/stores/jsonl";
+import { trinkets } from "@trinkets/core";
 
-const store = await openJsonlStore({ baseDir: ".trinkets" });
-const tr = makeTrinkets({ store, clock: () => new Date().toISOString() });
-
-await tr.init();
+const tr = await trinkets.make({
+  baseDir: ".trinkets",
+  clock: () => new Date().toISOString(),
+});
 
 const auth = await tr.createIssue({
   title: "Implement auth redirect",
@@ -49,6 +48,9 @@ const next = await tr.nextWork({ label: "frontend", priorities: [0, 1] }, "prior
 if (next.ok) console.log("Next focus", next.value?.title);
 ```
 
+`trinkets.make()` initializes the underlying store the first time you call it, so
+the returned SDK is ready for commands immediately.
+
 Key takeaways:
 
 - The ready queue always respects blockers and status (`open` stories only).
@@ -65,16 +67,12 @@ Goal: capture `blocks` + `parent-child` relationships, materialize graphs via
 Heads V2 + KV cache, and route work from the ready queue into workers.
 
 ```ts
-import { makeTrinkets } from "@trinkets/core/embed";
-import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
-import { openKvCache } from "@trinkets/core/cache/kv";
+import { trinkets } from "@trinkets/core";
 
 const baseDir = ".trinkets";
-const store = await openJsonlStoreWithHeadsV2({ baseDir, validateEvents: true });
-const cache = await openKvCache("checkout-squad", baseDir);
-const tr = makeTrinkets({ store, cache });
-
-await tr.init();
+const store = await trinkets.store.heads({ baseDir, validateEvents: true });
+const cache = await trinkets.cache.kv("checkout-squad", baseDir);
+const tr = await trinkets.make({ store, cache });
 
 const api = await tr.createIssue({ title: "Design payment API", kind: "feature", priority: 0 });
 const ui = await tr.createIssue({ title: "Responsive checkout UI", kind: "feature", priority: 1, labels: ["ux"] });
@@ -220,6 +218,8 @@ The advanced script guides you through the end-to-end use case:
 
 Use these scripts as starting points or copy/paste snippets directly into your
 agent/worker environment.
+
+Quick smoke test: `deno task demo` runs the basic embed example end-to-end.
 
 ## Next steps
 

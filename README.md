@@ -19,7 +19,7 @@ agents themselves. trinkets carries that idea forward for TypeScript/Deno apps:
 - **Naturally distributed** – store files live in your repo, which means
   branching, merging, and selective sync all piggyback on git.
 - **Agent friendly** – coding agents can file, query, and reconcile issues just
-  by calling `makeTrinkets()`; no extra daemon or RPC tier required.
+  by calling `trinkets.make()`; no extra daemon or RPC tier required.
 - **Shockingly small footprint** – a handful of TypeScript modules you can drop
   into any Deno/JSR runtime.
 
@@ -33,26 +33,18 @@ deno add @trinkets/core
 npx jsr add @trinkets/core
 ```
 
-Direct imports also work:
+Then import the single entry point:
 
 ```ts
-import { makeTrinkets } from "jsr:@trinkets/core/embed";
-import { openJsonlStoreWithHeadsV2 } from "jsr:@trinkets/core/stores/heads";
+import { trinkets } from "@trinkets/core";
 ```
 
 ## Library-first quick start
 
 ```ts
-import { makeTrinkets } from "@trinkets/core/embed";
-import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
-import { openKvCache } from "@trinkets/core/cache/kv";
+import { trinkets } from "@trinkets/core";
 
-const baseDir = ".trinkets";
-const store = await openJsonlStoreWithHeadsV2({ baseDir, validateEvents: true });
-const cache = await openKvCache("prod", baseDir);
-const tr = makeTrinkets({ store, cache, clock: () => new Date().toISOString() });
-
-await tr.init();
+const tr = await trinkets.make(); // defaults to .trinkets/ + KV cache
 
 const checkout = await tr.createIssue({
   title: "Responsive checkout shell",
@@ -71,15 +63,26 @@ const next = await tr.nextWork({ priorities: [0, 1] }, "priority-first");
 if (next.ok) console.log("Next task", next.value?.title);
 ```
 
+Need custom paths or caches? Pass options:
+
+```ts
+const tr = await trinkets.make({
+  baseDir: "./data/issues",
+  cacheName: "checkout-prod",
+  validateEvents: true,
+  clock: () => new Date().toISOString(),
+});
+```
+
 ## Usage patterns & runnable examples
 
 | Level        | Scenario                                                               | File                                           | Highlights |
 | ------------ | ---------------------------------------------------------------------- | ---------------------------------------------- | ---------- |
-| **Basic**    | Create issues, update status, inspect the ready queue                  | `examples/basic_embed.ts`                      | JSONL store + `makeTrinkets()` intro |
+| **Basic**    | Create issues, update status, inspect the ready queue                  | `examples/basic_embed.ts`                      | `await trinkets.make()` intro |
 | **Intermediate** | Model blocks/parent-child links, filter work, use the ready queue    | `examples/intermediate_dependencies.ts`        | Heads V2 store + KV cache + swim lanes |
 | **Advanced** | Custom store, cache, projection, and Kanban board export               | `examples/kanban_board.ts`                     | Event sourcing + external snapshot |
 
-Run any script with `deno run -A <file>` — the examples directory is
+Run any script with `deno run -A <file>` (or `deno task demo` for the basic walkthrough) — the examples directory is
 self-contained and doubles as canonical templates for your own agents.
 
 ## Kanban board use case
@@ -92,7 +95,7 @@ trinkets as an event-sourced tracker inside a Kanban board service:
 2. **Move stories through workflow states** (`open → doing → done`) using
    `tr.setStatus()` so the event log captures every transition.
 3. **Model dependencies** with both `parent-child` (epic → substory) and
-   `blocks` (UI blocked by API) links.
+   `blocks` (UI blocked by API) links via `tr.addLink()`.
 4. **Query ready work** via `tr.ready()` and `tr.nextWork()` to always surface
    the next safe task.
 5. **Render Kanban columns** by calling `tr.getGraph()` and grouping by status.
@@ -106,11 +109,12 @@ hydrate a UI framework of your choice.
 
 | Store implementation              | When to use                                                  | Notes |
 | --------------------------------- | ------------------------------------------------------------ | ----- |
-| `openJsonlStore`                  | Small repos, local scripts, rapid prototyping                | Simplest setup, full replay on read |
-| `openJsonlStoreWithHeadsV2`       | Services, dashboards, long-lived agents                      | Tracks byte offsets + snapshots for sub-ms reads |
-| Custom `StorePort` (see advanced example) | Specialized deployments (in-memory, remote KV, multi-region) | Implement `append`, `scan`, `materialize` to plug anything in |
+| `trinkets.store.jsonl()`          | Small repos, local scripts, rapid prototyping                | Simplest setup, full replay on read |
+| `trinkets.store.heads()`          | Services, dashboards, long-lived agents                      | Tracks byte offsets + snapshots for sub-ms reads |
+| Custom `StorePort` (see advanced example) | Specialized deployments (in-memory, remote KV, multi-region) | Implement `StorePort` + hand to `trinkets.make()` |
 
-Pair any store with a cache port (KV, SQLite, or your own implementation) to
+Pair any store with a cache port (`trinkets.cache.kv`, `trinkets.cache.sqlite`,
+or disable caching via `cache: null`) to
 hydrate graphs instantly while keeping the underlying event log append-only.
 
 ## Performance snapshot
@@ -128,11 +132,11 @@ Complete API docs live on JSR: **[https://jsr.io/@trinkets/core/doc](https://jsr
 
 Key modules:
 
-- `embed` – `makeTrinkets()` high-level API
-- `domain` – low-level primitives (`createIssue`, `setStatus`, etc.)
-- `search` – filtering, `nextWork()` strategies
-- `query` – ready queue helpers
-- `stores/*` and `cache/*` – pluggable persistence layers
+- `trinkets.make` – create embedded SDK instances
+- `trinkets.store.*` / `trinkets.cache.*` – persistence adapters
+- `trinkets.domain` – bare-metal primitives (`createIssue`, `setStatus`, etc.)
+- `trinkets.query` / `trinkets.search` – ready queue helpers + strategies
+- `trinkets.infra.*` – retry, observability, backup, and integrity tooling
 
 Jump into `docs/USER_GUIDE.md` for a deeper, step-by-step embedder guide that
 mirrors the Basic → Intermediate → Advanced progression.

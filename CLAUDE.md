@@ -125,13 +125,14 @@ Pure functions in [src/domain.ts](src/domain.ts):
 
 ### Embedding API
 
-[src/embed.ts](src/embed.ts) wraps domain functions with cache invalidation:
+[src/embed.ts](src/embed.ts) backs the public `trinkets.make()` entry point:
 
 ```ts
-const tr = makeTrinkets({ store, cache });
-await tr.init();
-const issue = await tr.createIssue({ title: "...", priority: 0 });
-const readyList = await tr.ready();
+import { trinkets } from "@trinkets/core";
+
+const sdk = await trinkets.make({ store, cache });
+const issue = await sdk.createIssue({ title: "...", priority: 0 });
+const readyList = await sdk.ready();
 ```
 
 The wrapper automatically refreshes cache after mutations when a CachePort is

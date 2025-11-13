@@ -9,12 +9,14 @@
  * Run with: deno run -A examples/intermediate_dependencies.ts
  */
 
-import { makeTrinkets } from "../src/embed.ts";
-import { openJsonlStoreWithHeadsV2 } from "../src/store_jsonl_heads_v2.ts";
-import { openKvCache } from "../src/cache_kv.ts";
-import type { CacheError, StoreError } from "../src/ports.ts";
-import type { Result } from "../src/result.ts";
-import type { Issue } from "../src/adt.ts";
+import { trinkets } from "../src/index.ts";
+import type {
+  CacheError,
+  Issue,
+  Result,
+  StoreError,
+  Trinkets,
+} from "../src/index.ts";
 
 const clock = () => new Date().toISOString();
 
@@ -32,15 +34,13 @@ async function main() {
   console.log("🧩 Trinkets Intermediate Workflow Example\n");
   const baseDir = await Deno.makeTempDir({ prefix: "tr-intermediate" });
 
-  const store = await openJsonlStoreWithHeadsV2({
+  const store = await trinkets.store.heads({
     baseDir,
     validateEvents: true,
     lockTimeoutMs: 2000,
   });
-  const cache = await openKvCache("intermediate", baseDir);
-  const tr = makeTrinkets({ store, cache, clock });
-
-  expectOk(await tr.init(), "init store");
+  const cache = await trinkets.cache.kv("intermediate", baseDir);
+  const tr = await trinkets.make({ store, cache, clock });
 
   const stories = await seedStories(tr);
   await declareDependencies(tr, stories);
@@ -75,7 +75,7 @@ type StoryHandles = {
   integration: Issue;
 };
 
-async function seedStories(tr: ReturnType<typeof makeTrinkets>): Promise<StoryHandles> {
+async function seedStories(tr: Trinkets): Promise<StoryHandles> {
   const epic = expectOk(
     await tr.createIssue({
       title: "Mobile checkout epic",
@@ -131,10 +131,7 @@ async function seedStories(tr: ReturnType<typeof makeTrinkets>): Promise<StoryHa
   return { api, ui, qa, epic, integration };
 }
 
-async function declareDependencies(
-  tr: ReturnType<typeof makeTrinkets>,
-  stories: StoryHandles,
-) {
+async function declareDependencies(tr: Trinkets, stories: StoryHandles) {
   expectOk(
     await tr.addLink(stories.ui.id, stories.api.id, "blocks"),
     "link ui blocked by api",
@@ -157,7 +154,7 @@ async function declareDependencies(
   );
 }
 
-async function showReady(label: string, tr: ReturnType<typeof makeTrinkets>) {
+async function showReady(label: string, tr: Trinkets) {
   const ready = expectOk(await tr.ready(), "ready queue");
   console.log(`📮 ${label}: ${ready.length} ready stories`);
   for (const story of ready) {
@@ -168,7 +165,7 @@ async function showReady(label: string, tr: ReturnType<typeof makeTrinkets>) {
   console.log();
 }
 
-async function printSwimLanes(tr: ReturnType<typeof makeTrinkets>) {
+async function printSwimLanes(tr: Trinkets) {
   const graph = expectOk(await tr.getGraph(), "materialize graph");
   const statuses = ["open", "doing", "done", "canceled"] as const;
   console.log("🛝 Swim Lanes:");

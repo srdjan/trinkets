@@ -29,6 +29,7 @@
     "fmt": "deno fmt",
     "lint": "deno lint",
     "publish": "jsr publish",
+    "demo": "deno run -A examples/basic_embed.ts",
     "tr": "deno run -A cli/tr.ts",
     "init-merge": "deno run -A cli/init_merge.ts"
   },
