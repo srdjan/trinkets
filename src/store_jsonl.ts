@@ -1,18 +1,20 @@
-import { ensureDir } from "https://deno.land/std@0.224.0/fs/ensure_dir.ts";
-import { join } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { ensureDir } from "jsr:@std/fs@1/ensure-dir";
+import { join } from "jsr:@std/path@1";
 import type { Event, GraphState } from "./adt.ts";
 import { materializeFromEvents } from "./domain_materialize.ts";
 import { parseEvent } from "./schemas.ts";
 import type { Result } from "./result.ts";
 import { err, ok } from "./result.ts";
-import type { StoreError } from "./ports.ts";
+import type { StoreError, StorePort } from "./ports.ts";
 import * as logger from "./logger.ts";
 
 export type JsonlStoreOptions = Readonly<
   { baseDir: string; validateEvents?: boolean; lockTimeoutMs?: number }
 >;
 
-export async function openJsonlStore(opts: JsonlStoreOptions) {
+export async function openJsonlStore(
+  opts: JsonlStoreOptions,
+): Promise<StorePort> {
   await ensureDir(opts.baseDir);
   const issuesPath = join(opts.baseDir, "issues.jsonl");
   const linksPath = join(opts.baseDir, "links.jsonl");

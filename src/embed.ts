@@ -29,7 +29,43 @@ export type EmbedOptions = Readonly<
   { store: StorePort; cache?: CachePort | null; clock?: () => string }
 >;
 
-export function makeTrinkets(opts: EmbedOptions) {
+export type Trinkets = Readonly<{
+  init: () => Promise<Result<void, StoreError>>;
+  getGraph: () => Promise<Result<GraphState, StoreError | CacheError>>;
+  ready: () => Promise<Result<readonly Issue[], StoreError | CacheError>>;
+  nextWork: (
+    filters?: Parameters<typeof nextWork>[1],
+    strategy?: Parameters<typeof nextWork>[2],
+  ) => Promise<Result<Issue | undefined, StoreError | CacheError>>;
+  createIssue: (input: {
+    title: string;
+    body?: string;
+    kind?: IssueKind;
+    priority?: 0 | 1 | 2 | 3;
+    labels?: readonly string[];
+  }) => Promise<Result<Issue, StoreError | CacheError>>;
+  patchIssue: (
+    id: IssueId,
+    patch: Partial<{
+      title: string;
+      body: string;
+      kind: IssueKind;
+      priority: 0 | 1 | 2 | 3;
+      labels: readonly string[];
+    }>,
+  ) => Promise<Result<void, StoreError | CacheError>>;
+  setStatus: (
+    id: IssueId,
+    status: IssueStatus,
+  ) => Promise<Result<void, StoreError | CacheError>>;
+  addLink: (
+    from: IssueId,
+    to: IssueId,
+    type: DepType,
+  ) => Promise<Result<void, StoreError | CacheError>>;
+}>;
+
+export function makeTrinkets(opts: EmbedOptions): Trinkets {
   const env: Env = { now: opts.clock ?? (() => new Date().toISOString()) };
   let inMemoryGraph: GraphState | null = null;
   let inflightMaterialize:
@@ -105,7 +141,7 @@ export function makeTrinkets(opts: EmbedOptions) {
     nextWork: async (
       filters?: Parameters<typeof nextWork>[1],
       strategy?: Parameters<typeof nextWork>[2],
-    ): Promise<Result<readonly Issue[], StoreError | CacheError>> => {
+    ): Promise<Result<Issue | undefined, StoreError | CacheError>> => {
       const graphResult = await getGraph();
       if (!graphResult.ok) return graphResult;
       return ok(nextWork(graphResult.value, filters, strategy));
@@ -116,7 +152,7 @@ export function makeTrinkets(opts: EmbedOptions) {
         title: string;
         body?: string;
         kind?: IssueKind;
-        priority?: number;
+        priority?: 0 | 1 | 2 | 3;
         labels?: readonly string[];
       },
     ): Promise<Result<Issue, StoreError | CacheError>> => {
@@ -139,7 +175,7 @@ export function makeTrinkets(opts: EmbedOptions) {
           title: string;
           body: string;
           kind: IssueKind;
-          priority: number;
+          priority: 0 | 1 | 2 | 3;
           labels: readonly string[];
         }
       >,

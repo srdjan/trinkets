@@ -1,7 +1,7 @@
 import type { GraphState, IssueId } from "./adt.ts";
 import type { Result } from "./result.ts";
 import { err, ok } from "./result.ts";
-import type { CacheError } from "./ports.ts";
+import type { CacheError, CachePort } from "./ports.ts";
 import { validateGraphState } from "./schemas_runtime.ts";
 import * as logger from "./logger.ts";
 
@@ -14,7 +14,10 @@ type CachedData = {
 
 const CACHE_VERSION = 1;
 
-export async function openKvCache(name = "trinkets", baseDir?: string) {
+export async function openKvCache(
+  name = "trinkets",
+  baseDir?: string,
+): Promise<CachePort> {
   const kv = await Deno.openKv();
   const ns = baseDir ? await hash(baseDir) : "global";
 

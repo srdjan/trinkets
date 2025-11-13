@@ -25,9 +25,6 @@ deno task tr init           # Initialize repository
 deno task tr create "Title" --priority 0
 deno task tr ready          # Show ready issues
 
-# HTTP server
-deno task serve             # Start HTTP adapter on :8787 (examples/http.ts)
-
 # Publishing
 deno task publish           # Publish to JSR
 
@@ -116,15 +113,6 @@ Pure functions in [src/domain.ts](src/domain.ts):
 - [src/search.ts](src/search.ts) — `filterIssues()` with
   text/label/kind/priority filters, `nextWork()` with strategies
   (`priority-first`, `oldest-first`, `shortest-title`)
-
-### HTTP Adapter
-
-[src/http_adapter.ts](src/http_adapter.ts) provides read-only REST + SSR:
-
-- JSON endpoints: `/ready`, `/search`, `/issue/:id`, `/next`, `/graph/summary`
-- SSR fragment: `/blocked` (HTMX-compatible)
-- Configurable CORS and ETag headers
-- Uses weak ETags by default (`etag: "weak"`)
 
 ### Embedding API
 

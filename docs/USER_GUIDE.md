@@ -55,7 +55,9 @@ await serve(async (req) => {
   if (url.pathname === "/ready") {
     const readyResult = await tr.ready();
     if (!readyResult.ok) {
-      return new Response(JSON.stringify({ error: readyResult.error }), { status: 500 });
+      return new Response(JSON.stringify({ error: readyResult.error }), {
+        status: 500,
+      });
     }
     return new Response(JSON.stringify(readyResult.value), {
       headers: { "content-type": "application/json" },

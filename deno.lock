@@ -1,7 +1,24 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/fs@1": "1.0.19",
+    "jsr:@std/internal@^1.0.10": "1.0.12",
+    "jsr:@std/path@1": "1.1.2",
     "npm:valibot@0.31.0": "0.31.0"
+  },
+  "jsr": {
+    "@std/fs@1.0.19": {
+      "integrity": "051968c2b1eae4d2ea9f79a08a3845740ef6af10356aff43d3e2ef11ed09fb06"
+    },
+    "@std/internal@1.0.12": {
+      "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@std/path@1.1.2": {
+      "integrity": "c0b13b97dfe06546d5e16bf3966b1cadf92e1cc83e56ba5476ad8b498d9e3038",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    }
   },
   "npm": {
     "valibot@0.31.0": {

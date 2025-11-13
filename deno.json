@@ -1,6 +1,23 @@
 {
   "name": "@trinkets/core",
   "version": "0.1.0",
+  "description": "A lightweight event-sourced issue tracker with append-only storage, dependency graphs, and production-grade resilience features",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/srdjans/trinkets"
+  },
+  "author": "Srdjan Strbanovic",
+  "keywords": [
+    "issue-tracker",
+    "event-sourcing",
+    "dependency-graph",
+    "project-management",
+    "append-only",
+    "light-fp",
+    "result-type",
+    "deno"
+  ],
   "tasks": {
     "test": "deno test -A --unstable-kv",
     "test:unit": "deno test -A src/domain_test.ts src/result_test.ts",
@@ -39,6 +56,13 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "lib": ["ES2022", "deno.ns", "deno.window"]
+    "lib": ["ES2022", "deno.ns", "deno.window", "deno.unstable"]
+  },
+  "publish": {
+    "exclude": [
+      "cli/",
+      "examples/",
+      "**/*_test.ts"
+    ]
   }
 }
