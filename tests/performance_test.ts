@@ -2,11 +2,11 @@ import {
   assertEquals,
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { openJsonlStore } from "./store_jsonl.ts";
-import { createIssue } from "./domain.ts";
-import { buildIndexes } from "./indexed_graph.ts";
-import { ready as readyOriginal } from "./query.ts";
-import { ready as readyIndexed } from "./query_indexed.ts";
+import { openJsonlStore } from "../src/store_jsonl.ts";
+import { createIssue } from "../src/domain.ts";
+import { buildIndexes } from "../src/indexed_graph.ts";
+import { ready as readyOriginal } from "../src/query.ts";
+import { ready as readyIndexed } from "../src/query_indexed.ts";
 
 const testOptions = { sanitizeOps: false, sanitizeResources: false };
 

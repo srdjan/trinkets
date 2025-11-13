@@ -2,19 +2,19 @@ import {
   assertEquals,
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { openJsonlStore } from "./store_jsonl.ts";
-import { openJsonlStoreWithHeadsV2 } from "./store_jsonl_heads_v2.ts";
+import { openJsonlStore } from "../src/store_jsonl.ts";
+import { openJsonlStoreWithHeadsV2 } from "../src/store_jsonl_heads_v2.ts";
 import {
   createIssue,
   addLink,
   setStatus,
   patchIssue,
   validateInvariants,
-} from "./domain.ts";
-import { ready, explainBlocked } from "./query.ts";
-import { buildIndexes } from "./indexed_graph.ts";
-import { ready as readyIndexed } from "./query_indexed.ts";
-import type { Issue } from "./adt.ts";
+} from "../src/domain.ts";
+import { ready, explainBlocked } from "../src/query.ts";
+import { buildIndexes } from "../src/indexed_graph.ts";
+import { ready as readyIndexed } from "../src/query_indexed.ts";
+import type { Issue } from "../src/adt.ts";
 
 const testEnv = { now: () => "2024-01-01T00:00:00.000Z" };
 const testOptions = { sanitizeOps: false, sanitizeResources: false };

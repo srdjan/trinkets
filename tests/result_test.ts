@@ -11,11 +11,11 @@ import {
   ok,
   unwrap,
   unwrapOr,
-} from "./result.ts";
-import type { Result } from "./result.ts";
-import { openJsonlStore } from "./store_jsonl.ts";
-import { createIssue, initRepo } from "./domain.ts";
-import type { StorePort } from "./ports.ts";
+} from "../src/result.ts";
+import type { Result } from "../src/result.ts";
+import { openJsonlStore } from "../src/store_jsonl.ts";
+import { createIssue, initRepo } from "../src/domain.ts";
+import type { StorePort } from "../src/ports.ts";
 
 const testOptions = { sanitizeOps: false, sanitizeResources: false };
 

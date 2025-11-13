@@ -2,7 +2,7 @@ import {
   assertEquals,
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { openJsonlStore } from "./store_jsonl.ts";
+import { openJsonlStore } from "../src/store_jsonl.ts";
 import {
   addLink,
   createIssue,
@@ -10,9 +10,9 @@ import {
   patchIssue,
   setStatus,
   validateInvariants,
-} from "./domain.ts";
-import { materializeFromEvents } from "./domain_materialize.ts";
-import type { IssueId } from "./adt.ts";
+} from "../src/domain.ts";
+import { materializeFromEvents } from "../src/domain_materialize.ts";
+import type { IssueId } from "../src/adt.ts";
 
 const testEnv = { now: () => "2024-01-01T00:00:00.000Z" };
 

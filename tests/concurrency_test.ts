@@ -1,8 +1,8 @@
 import {
   assertEquals,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { openJsonlStore } from "./store_jsonl.ts";
-import { createIssue } from "./domain.ts";
+import { openJsonlStore } from "../src/store_jsonl.ts";
+import { createIssue } from "../src/domain.ts";
 
 const testEnv = { now: () => "2024-01-01T00:00:00.000Z" };
 const testOptions = { sanitizeOps: false, sanitizeResources: false };

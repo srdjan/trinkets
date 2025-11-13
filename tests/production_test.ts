@@ -2,26 +2,26 @@ import {
   assertEquals,
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { openJsonlStore } from "./store_jsonl.ts";
-import { createIssue } from "./domain.ts";
-import { ok } from "./result.ts";
-import { CircuitBreaker, retryable, withRetry } from "./retry.ts";
+import { openJsonlStore } from "../src/store_jsonl.ts";
+import { createIssue } from "../src/domain.ts";
+import { ok } from "../src/result.ts";
+import { CircuitBreaker, retryable, withRetry } from "../src/retry.ts";
 import {
   consoleObservability,
   instrument,
   MetricsAggregator,
-} from "./observability.ts";
+} from "../src/observability.ts";
 import {
   formatIntegrityReport,
   repairEvents,
   verifyIntegrity,
-} from "./integrity.ts";
+} from "../src/integrity.ts";
 import {
   createBackup,
   exportToFile,
   importFromFile,
   validateBackup,
-} from "./backup.ts";
+} from "../src/backup.ts";
 
 const testOptions = { sanitizeOps: false, sanitizeResources: false };
 
