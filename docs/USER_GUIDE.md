@@ -1,102 +1,231 @@
-# Trinkets — User Guide (App Embedder)
+# Trinkets Embedder Guide (Beads Edition)
 
-This guide targets Deno v2.5.6+ and walks you through embedding the library,
-choosing a store, using caching, exposing a read-only HTTP surface, enabling
-strict validation, and viewing blocked reasons.
+This guide is for developers embedding trinkets as a Beads-style event log
+inside their own applications or coding agents. All snippets target Deno
+v2.5.6+ (where KV is stable) and assume you want programmatic control instead of
+invoking the `tr` CLI.
 
-## 1. Stores
+## Mental model
 
-| Store                       | File(s)                                  | Pros                                          | Cons                       | When to use          |
-| --------------------------- | ---------------------------------------- | --------------------------------------------- | -------------------------- | -------------------- |
-| `openJsonlStore`            | `.trinkets/issues.jsonl` + `links.jsonl` | Simple, portable                              | Full replay on read        | Small repos, scripts |
-| `openJsonlStoreWithHeadsV2` | adds `heads.json`, `state.json`          | Incremental replay using byte offsets; faster | Slightly more moving parts | Services, dashboards |
+1. **Event sourced:** Every change appends an event (`IssueCreated`, `LinkAdded`,
+   etc.) to JSONL files inside your repo.
+2. **Graph-first:** `makeTrinkets()` keeps a hydrated graph in memory (and
+   optionally cache) so you can query ready work instantly.
+3. **Drop-in:** Stores and caches are simple ports. Swap in JSONL, Heads V2, or a
+   custom implementation without changing the rest of your code.
 
-### Incremental materialization
+---
 
-Heads V2 tails only new bytes and applies them via `applyEvent(state, e)`. It
-persists a `state.json` snapshot and byte offsets in `heads.json`.
+## Basic — embed the core API
 
-## 2. Cache
-
-- **KV**: `openKvCache("trinkets", baseDir)` — namespaced by baseDir hash
-- **SQLite**: placeholder in this skeleton (swap in your driver)
-
-## 3. Embedding API
+Goal: create issues, update status, and ask for the next task using the highest
+level abstraction.
 
 ```ts
-const tr = makeTrinkets({ store, cache });
+import { makeTrinkets } from "@trinkets/core/embed";
+import { openJsonlStore } from "@trinkets/core/stores/jsonl";
+
+const store = await openJsonlStore({ baseDir: ".trinkets" });
+const tr = makeTrinkets({ store, clock: () => new Date().toISOString() });
+
 await tr.init();
-await tr.createIssue({ title: "A", priority: 0, labels: ["p0"] });
-await tr.addLink("bd-...", "bd-...", "blocks");
-const candidates = await tr.ready();
-const next = await tr.nextWork({ label: "p0" }, "priority-first");
+
+const auth = await tr.createIssue({
+  title: "Implement auth redirect",
+  kind: "feature",
+  priority: 1,
+  labels: ["frontend"],
+});
+if (!auth.ok) throw auth.error;
+
+await tr.setStatus(auth.value.id, "doing");
+
+const ready = await tr.ready();
+if (ready.ok) {
+  console.log("Ready stories", ready.value.map((i) => i.title));
+}
+
+const next = await tr.nextWork({ label: "frontend", priorities: [0, 1] }, "priority-first");
+if (next.ok) console.log("Next focus", next.value?.title);
 ```
 
-## 4. Modular imports & server wiring
+Key takeaways:
 
-Use the subpath exports to keep server bundles lean and compose your own HTTP
-surface (the older `startHttp` helper has been removed). Example using the
-built-in `Deno.serve` API available in Deno v2.5.6:
+- The ready queue always respects blockers and status (`open` stories only).
+- `nextWork(filters, strategy)` lets you plug in different heuristics without
+  re-implementing search logic.
+- JSONL is perfect for prototyping; you can commit the `.trinkets/` directory to
+  git for full history.
+
+---
+
+## Intermediate — dependencies, filtering, and the ready queue
+
+Goal: capture `blocks` + `parent-child` relationships, materialize graphs via
+Heads V2 + KV cache, and route work from the ready queue into workers.
 
 ```ts
 import { makeTrinkets } from "@trinkets/core/embed";
 import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
 import { openKvCache } from "@trinkets/core/cache/kv";
 
-const store = await openJsonlStoreWithHeadsV2({ baseDir: ".trinkets" });
-const cache = await openKvCache("trinkets", ".trinkets");
+const baseDir = ".trinkets";
+const store = await openJsonlStoreWithHeadsV2({ baseDir, validateEvents: true });
+const cache = await openKvCache("checkout-squad", baseDir);
 const tr = makeTrinkets({ store, cache });
 
 await tr.init();
 
-Deno.serve({ hostname: "0.0.0.0", port: 8787 }, async (req) => {
-  const url = new URL(req.url);
-  if (url.pathname === "/ready") {
-    const readyResult = await tr.ready();
-    if (!readyResult.ok) {
-      return Response.json({ error: readyResult.error }, { status: 500 });
-    }
-    return Response.json(readyResult.value);
-  }
-  return new Response("ok");
-});
+const api = await tr.createIssue({ title: "Design payment API", kind: "feature", priority: 0 });
+const ui = await tr.createIssue({ title: "Responsive checkout UI", kind: "feature", priority: 1, labels: ["ux"] });
+const qa = await tr.createIssue({ title: "Checkout regression suite", kind: "chore", priority: 2, labels: ["qa"] });
+
+await tr.addLink(ui.value.id, api.value.id, "blocks"); // UI waits on API
+await tr.addLink(api.value.id, qa.value.id, "parent-child"); // QA rolls up to API epic
+
+const ready = await tr.ready();
+// Only API should be ready because UI is blocked.
+
+const nextUx = await tr.nextWork({ label: "ux" }, "priority-first");
+// null until API finishes.
+
+await tr.setStatus(api.value.id, "done");
+const readyAfter = await tr.ready();
+// UI now appears because its blocker is finished.
 ```
 
-## 5. Search & Next Work
+Patterns unlocked:
 
-- Filters: `label`, `text`, `kinds`, `priorities`
-- Strategies: `"priority-first" | "oldest-first" | "shortest-title"`
+- **Dependency reasoning:** With `graph.incoming`, you can explain blockers to
+  users or agents (`graph.incoming.get(issue.id)` lists the `Link`s).
+- **Filtering:** Apply labels/priorities when calling `nextWork()` to feed
+  specialized workers (e.g., `label: "ux"`).
+- **Ready queue dispatch:** Poll `tr.ready()` or `tr.nextWork()` inside an agent
+  loop to continuously pull the next unblocked story.
 
-## 6. Git-friendly JSONL
+---
 
-```bash
-deno task init-merge
-# Adds .gitattributes + .gitconfig.merge-jsonl
-# Then in .git/config: 
-# [include]
-#   path = .gitconfig.merge-jsonl
-```
+## Advanced — Kanban board + custom infrastructure
 
-## 7. Strict schemas (valibot)
+Goal: treat trinkets as the event-sourced core of a Kanban application. The
+advanced example (`examples/kanban_board.ts`) demonstrates the following:
 
-Enable structural validation on append:
+### 1. Custom store implementation
 
 ```ts
-const store = await openJsonlStoreWithHeadsV2({
-  baseDir: ".trinkets",
-  validateEvents: true,
-});
+class MemoryEventStore implements StorePort {
+  private events: Event[] = [];
+  private listeners = new Set<(event: Event) => void>();
+
+  onEvent(listener: (event: Event) => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  async append(event: Event) {
+    this.events.push(event);
+    this.listeners.forEach((fn) => fn(event));
+    return ok(undefined);
+  }
+
+  async scan() {
+    return ok([...this.events]);
+  }
+
+  async materialize() {
+    return ok(materializeFromEvents(this.events));
+  }
+}
 ```
 
-## 8. Blocked reasons (SSR)
+Any data source (KV, Dynamo, HTTP API, in-memory) can plug in as long as it
+implements `append`, `scan`, and `materialize`.
 
-The dashboard includes a server-rendered `/blocked` fragment that lists items
-blocked by `blocks` links, with blocker IDs in-line.
+### 2. Caching strategy
 
-## 9. Production notes
+Pair the store with either the built-in KV/SQLite cache or roll your own:
 
-- Keep `.trinkets/` at repo root and commit JSONL logs
-- Prefer Heads V2 and KV cache for services
-- Consider rotating logs (daily JSONL files) behind a composite store as volume
-  grows
-- Expose read-only HTTP in dashboards; mutate via CLI/agents
+```ts
+class MemoryCache implements CachePort {
+  private snapshot: GraphState | null = null;
+  async hydrate() { return ok(this.snapshot); }
+  async persist(g: GraphState) { this.snapshot = g; return ok(undefined); }
+}
+```
+
+### 3. Event-sourcing patterns
+
+Because the custom store exposes `onEvent`, you can run projections in-process:
+
+```ts
+class FlowProjection {
+  private completed = 0;
+  constructor(store: MemoryEventStore) {
+    store.onEvent((event) => {
+      if (event._type === "IssueStatusSet" && event.status === "done") {
+        this.completed++;
+      }
+    });
+  }
+
+  report() {
+    return { storiesCompleted: this.completed };
+  }
+}
+```
+
+Use projections for analytics, webhooks, or to keep a read model like a Kanban
+board synchronized.
+
+### 4. Integration with external systems
+
+The Kanban example exports its board snapshot (plus the `nextWork()` suggestion)
+to a webhook/file sink:
+
+```ts
+const graph = await tr.getGraph();
+const next = await tr.nextWork(undefined, "priority-first");
+const snapshot = buildBoardSnapshot(graph.value, next.value?.title);
+await webhook.publish(snapshot);
+```
+
+Swap the file-backed sink with your actual transport (HTTP POST, S3 object,
+message bus, etc.).
+
+### 5. Concrete Kanban walkthrough
+
+The advanced script guides you through the end-to-end use case:
+
+1. **Create stories** for API, UI, integrations, QA, and an umbrella epic.
+2. **Move stories** across `open → doing → done` via `tr.setStatus()` to keep an
+   auditable event log.
+3. **Manage dependencies** using `blocks` links (`ui` blocked by `api`) and
+   `parent-child` links (epic → story).
+4. **Query ready work** with `tr.ready()` and `tr.nextWork()` to populate the
+   ready column or drive automation.
+5. **Display Kanban columns** by grouping `tr.getGraph()` results by status and
+   printing blockers inline.
+6. **Publish snapshots** externally so other systems (dashboards, notebooks,
+   agents) can stay in sync.
+
+---
+
+## Scenario matrix
+
+| Stage        | File                                 | Purpose |
+| ------------ | ------------------------------------ | ------- |
+| Basic        | `examples/basic_embed.ts`            | Minimal embed + ready queue |
+| Intermediate | `examples/intermediate_dependencies.ts` | Dependencies + filtering |
+| Advanced     | `examples/kanban_board.ts`           | Custom store, caching, webhook sync |
+
+Use these scripts as starting points or copy/paste snippets directly into your
+agent/worker environment.
+
+## Next steps
+
+- Wire the library into your own agents or services using the pattern that fits
+  their complexity.
+- Keep `.trinkets/` (or your custom store files) under version control so every
+  event is reviewable.
+- Explore the API docs on JSR for deeper dives into `search`, `query`, and
+  performance helpers like `indexed_graph`.

@@ -1,65 +1,46 @@
-# trinkets — a minimal Beads-style library (Deno + JSR)
+# trinkets — a Beads-style embedded issue log (Deno + JSR)
 
 [![JSR](https://jsr.io/badges/@trinkets/core)](https://jsr.io/@trinkets/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**trinkets** is a light-functional TypeScript library inspired by Steve Yegge's
-Beads. It gives you an append-only JSONL event log and a tiny graph model for
-issues + links.
+trinkets is a light-functional TypeScript library inspired by Steve Yegge's
+Beads project. Instead of shipping a monolithic tracker or forcing teams through
+another CLI, trinkets embeds directly inside your agent or service, persisting
+issues as append-only JSONL files that live beside your code in git.
 
-- Append-only events: `IssueCreated`, `IssuePatched`, `IssueStatusSet`,
-  `LinkAdded`, `LinkRemoved`
-- Dependency kinds: `blocks`, `parent-child`, `related`, `discovered-from`
-- Ready queue + next-work strategies
-- Deno-first, published to JSR (library code)
+## Beads "Just Works" inside your app
 
-> Target runtime: Deno v2.5.6+ where `Deno.serve` and Deno KV are built in—no
-> std/http imports or unstable flags required for the snippets below.
+Beads acts like a tiny, distributed database: every worker (human or agent)
+appends events, git handles replication, and collisions are resolved by the
+agents themselves. trinkets carries that idea forward for TypeScript/Deno apps:
+
+- **Append-only reality** – events (`IssueCreated`, `LinkAdded`, etc.) are the
+  source of truth, so you can replay or audit any time.
+- **Naturally distributed** – store files live in your repo, which means
+  branching, merging, and selective sync all piggyback on git.
+- **Agent friendly** – coding agents can file, query, and reconcile issues just
+  by calling `makeTrinkets()`; no extra daemon or RPC tier required.
+- **Shockingly small footprint** – a handful of TypeScript modules you can drop
+  into any Deno/JSR runtime.
 
 ## Installation
 
-Install from JSR:
-
 ```bash
-# For Deno
+# Deno
 deno add @trinkets/core
 
-# For Node.js (with JSR support)
+# Node.js (with JSR)
 npx jsr add @trinkets/core
 ```
 
-Or use direct JSR imports in Deno:
-
-```typescript
-import { createIssue } from "jsr:@trinkets/core/domain";
-import { openJsonlStore } from "jsr:@trinkets/core/stores/jsonl";
-```
-
-## Quick start
-
-```bash
-deno task tr init
-deno task tr create "Do thing A" --priority 0
-deno task tr ready
-```
-
-## Modular imports
-
-Use the new subpath exports to pull in only the slices you need in a server-side
-bundle:
+Direct imports also work:
 
 ```ts
-import { createIssue } from "@trinkets/core/domain";
-import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
-import { openKvCache } from "@trinkets/core/cache/kv";
-import { makeTrinkets } from "@trinkets/core/embed";
+import { makeTrinkets } from "jsr:@trinkets/core/embed";
+import { openJsonlStoreWithHeadsV2 } from "jsr:@trinkets/core/stores/heads";
 ```
 
-The classic `@trinkets/core` barrel still works, but subpath imports keep Deno
-servers from loading optional utilities (retry/circuit-breaker, backup tools,
-etc.) when they are not needed.
-
-## Embedding
+## Library-first quick start
 
 ```ts
 import { makeTrinkets } from "@trinkets/core/embed";
@@ -67,187 +48,91 @@ import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
 import { openKvCache } from "@trinkets/core/cache/kv";
 
 const baseDir = ".trinkets";
-const store = await openJsonlStoreWithHeadsV2({
-  baseDir,
-  validateEvents: true,
-});
-const cache = await openKvCache("trinkets", baseDir);
+const store = await openJsonlStoreWithHeadsV2({ baseDir, validateEvents: true });
+const cache = await openKvCache("prod", baseDir);
+const tr = makeTrinkets({ store, cache, clock: () => new Date().toISOString() });
 
-const tr = makeTrinkets({ store, cache });
-const initResult = await tr.init();
-if (!initResult.ok) throw initResult.error;
+await tr.init();
 
-const createA = await tr.createIssue({
-  title: "Ship login",
-  labels: ["p0"],
-  priority: 0,
-});
-if (!createA.ok) throw createA.error;
-
-const createB = await tr.createIssue({
-  title: "Session handling",
+const checkout = await tr.createIssue({
+  title: "Responsive checkout shell",
+  kind: "feature",
   priority: 1,
+  labels: ["ux"],
 });
-if (!createB.ok) throw createB.error;
+if (!checkout.ok) throw checkout.error;
 
-const linkResult = await tr.addLink(createB.value.id, createA.value.id, "blocks");
-if (!linkResult.ok) throw linkResult.error;
+await tr.setStatus(checkout.value.id, "doing");
 
-const readyResult = await tr.ready();
-if (!readyResult.ok) throw readyResult.error;
+const ready = await tr.ready();
+if (ready.ok) console.log("Ready stories", ready.value.map((i) => i.title));
 
-console.log(readyResult.value);
+const next = await tr.nextWork({ priorities: [0, 1] }, "priority-first");
+if (next.ok) console.log("Next task", next.value?.title);
 ```
 
-## Which Store Should I Use?
+## Usage patterns & runnable examples
 
-trinkets provides two store implementations with different performance
-characteristics:
+| Level        | Scenario                                                               | File                                           | Highlights |
+| ------------ | ---------------------------------------------------------------------- | ---------------------------------------------- | ---------- |
+| **Basic**    | Create issues, update status, inspect the ready queue                  | `examples/basic_embed.ts`                      | JSONL store + `makeTrinkets()` intro |
+| **Intermediate** | Model blocks/parent-child links, filter work, use the ready queue    | `examples/intermediate_dependencies.ts`        | Heads V2 store + KV cache + swim lanes |
+| **Advanced** | Custom store, cache, projection, and Kanban board export               | `examples/kanban_board.ts`                     | Event sourcing + external snapshot |
 
-### JSONL Store (`@trinkets/core/stores/jsonl`)
+Run any script with `deno run -A <file>` — the examples directory is
+self-contained and doubles as canonical templates for your own agents.
 
-**When to use:**
+## Kanban board use case
 
-- Small datasets (< 1,000 issues)
-- Command-line tools and scripts
-- Maximum portability and simplicity
-- Debugging and data inspection
+`examples/kanban_board.ts` doubles as an end-to-end tutorial for embedding
+trinkets as an event-sourced tracker inside a Kanban board service:
 
-**Performance:** O(N) full replay on every read
+1. **Create stories** with different kinds (`feature`, `chore`, `epic`) and
+   priorities.
+2. **Move stories through workflow states** (`open → doing → done`) using
+   `tr.setStatus()` so the event log captures every transition.
+3. **Model dependencies** with both `parent-child` (epic → substory) and
+   `blocks` (UI blocked by API) links.
+4. **Query ready work** via `tr.ready()` and `tr.nextWork()` to always surface
+   the next safe task.
+5. **Render Kanban columns** by calling `tr.getGraph()` and grouping by status.
+6. **Integrate externally** by exporting the board snapshot (plus the suggested
+   next task) to a webhook/file sink.
 
-```typescript
-import { openJsonlStore } from "@trinkets/core/stores/jsonl";
-const store = await openJsonlStore({ baseDir: ".trinkets" });
-```
+Use the same pattern to backfill dashboards, power chat-agent planning loops, or
+hydrate a UI framework of your choice.
 
-### Heads V2 Store (`@trinkets/core/stores/heads`)
+## Stores & caches
 
-**When to use:**
+| Store implementation              | When to use                                                  | Notes |
+| --------------------------------- | ------------------------------------------------------------ | ----- |
+| `openJsonlStore`                  | Small repos, local scripts, rapid prototyping                | Simplest setup, full replay on read |
+| `openJsonlStoreWithHeadsV2`       | Services, dashboards, long-lived agents                      | Tracks byte offsets + snapshots for sub-ms reads |
+| Custom `StorePort` (see advanced example) | Specialized deployments (in-memory, remote KV, multi-region) | Implement `append`, `scan`, `materialize` to plug anything in |
 
-- Production applications
-- Web servers and APIs
-- Large datasets (1,000+ issues)
-- Real-time dashboards
+Pair any store with a cache port (KV, SQLite, or your own implementation) to
+hydrate graphs instantly while keeping the underlying event log append-only.
 
-**Performance:** Incremental replay with byte offset tracking and state
-snapshots
-
-```typescript
-import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
-const store = await openJsonlStoreWithHeadsV2({ baseDir: ".trinkets" });
-```
-
-**Recommendation:** Use Heads V2 for production applications. It provides the
-same append-only guarantees as JSONL but with significantly better read
-performance.
-
-## Performance Comparison
+## Performance snapshot
 
 | Operation                       | JSONL Store | Heads V2 Store | Speedup |
 | ------------------------------- | ----------- | -------------- | ------- |
 | Initial materialize (1K issues) | ~50ms       | ~50ms          | 1x      |
-| Subsequent materialize (cached) | ~50ms       | <1ms           | 50x+    |
+| Subsequent materialize         | ~50ms       | <1ms           | 50x+    |
 | Append event                    | ~5ms        | ~5ms           | 1x      |
-| Full scan                       | O(N)        | O(new events)  | 10-100x |
+| Ready queue query               | O(N)        | O(new events)  | 10–100x |
 
-**Key optimizations in Heads V2:**
+## API reference
 
-- Byte offset tracking eliminates full file reads
-- State snapshots enable instant materialization
-- Version-aware cache invalidation
-- Atomic writes with temp file + rename
-
-## Examples
-
-Check out the [`examples/`](./examples/) directory for practical usage:
-
-- [**basic_usage.ts**](./examples/basic_usage.ts) - Creating issues, updating
-  status, basic queries
-- [**dependency_management.ts**](./examples/dependency_management.ts) - Working
-  with blocked/blocks relationships
-- [**query_patterns.ts**](./examples/query_patterns.ts) - Filtering by status,
-  kind, priority, labels
-- [**production_setup.ts**](./examples/production_setup.ts) - Retry, circuit
-  breaker, observability, caching
-- [**backup_restore.ts**](./examples/backup_restore.ts) - Data integrity
-  verification and disaster recovery
-
-Run any example:
-
-```bash
-deno run -A examples/basic_usage.ts
-```
-
-## API Reference
-
-Full API documentation is available on JSR:
-
-**📚 [View API Documentation on JSR](https://jsr.io/@trinkets/core/doc)**
+Complete API docs live on JSR: **[https://jsr.io/@trinkets/core/doc](https://jsr.io/@trinkets/core/doc)**
 
 Key modules:
 
-- [`domain`](https://jsr.io/@trinkets/core/doc/domain) - Core operations
-  (createIssue, addLink, setStatus)
-- [`query`](https://jsr.io/@trinkets/core/doc/query) - Finding ready and blocked
-  issues
-- [`search`](https://jsr.io/@trinkets/core/doc/search) - Filtering and work
-  strategies
-- [`embed`](https://jsr.io/@trinkets/core/doc/embed) - High-level embedding API
-- [`result`](https://jsr.io/@trinkets/core/doc/result) - Result type for error
-  handling
-- [`ports`](https://jsr.io/@trinkets/core/doc/ports) - Port interfaces
-  (StorePort, CachePort)
+- `embed` – `makeTrinkets()` high-level API
+- `domain` – low-level primitives (`createIssue`, `setStatus`, etc.)
+- `search` – filtering, `nextWork()` strategies
+- `query` – ready queue helpers
+- `stores/*` and `cache/*` – pluggable persistence layers
 
-## Troubleshooting
-
-### Permission Denied Errors
-
-trinkets requires file system access. Run with appropriate permissions:
-
-```bash
-deno run -A your-script.ts  # All permissions
-# Or specific permissions:
-deno run --allow-read --allow-write --allow-env your-script.ts
-```
-
-### KV Cache Errors
-
-Deno v2.5.6 ships Deno KV as a stable API, so no extra flags are required:
-
-```bash
-deno run -A your-script.ts
-```
-
-If you are pinned to Deno 1.x for any reason, add `--unstable-kv`.
-
-### Lock Timeout Errors
-
-If you see `LockTimeout` errors:
-
-- Multiple processes are accessing the same store directory
-- Use the retry utilities: `withRetry()` or `retryable()` from
-  `@trinkets/core/retry`
-- Increase timeout: `openJsonlStore({ baseDir, lockTimeoutMs: 5000 })`
-
-### Parse Errors
-
-If events.jsonl is corrupted:
-
-- Use integrity verification: `verifyIntegrity()` from
-  `@trinkets/core/integrity`
-- Repair corrupted data: `repairEvents()`
-- Restore from backup: `importFromFile()`
-
-See [USER_GUIDE.md](./USER_GUIDE.md) for more details.
-
-## Documentation
-
-- [**USER_GUIDE.md**](./USER_GUIDE.md) - Comprehensive usage guide
-- [**CLAUDE.md**](./CLAUDE.md) - Architecture and design decisions
-- [**Examples**](./examples/) - Practical code examples
-
-## License
-
-MIT License - see [LICENSE](./LICENSE) file for details.
-
-Copyright (c) 2025 Srdjan Strbanovic
+Jump into `docs/USER_GUIDE.md` for a deeper, step-by-step embedder guide that
+mirrors the Basic → Intermediate → Advanced progression.
