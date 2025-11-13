@@ -1,3 +1,22 @@
+/**
+ * @module query/indexed
+ *
+ * Optimized query functions using indexed graph state.
+ *
+ * Provides O(1) filtered queries (ready, byStatus, byPriority, byLabel)
+ * using pre-computed indexes for dramatic performance improvements.
+ *
+ * @example
+ * ```ts
+ * import { ready, byPriority } from "@trinkets/core/query/indexed";
+ * import { buildIndexes } from "@trinkets/core/indexed";
+ *
+ * const indexed = buildIndexes(graph);
+ * const readyIssues = ready(indexed, { priorities: [0, 1] });
+ * const highPri = byPriority(indexed, 0);
+ * ```
+ */
+
 import type { Issue, IssueId, IssueStatus } from "./adt.ts";
 import type { IndexedGraphState } from "./indexed_graph.ts";
 

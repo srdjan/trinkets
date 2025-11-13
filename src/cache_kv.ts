@@ -1,3 +1,19 @@
+/**
+ * @module cache/kv
+ *
+ * Deno KV-based cache implementation for GraphState.
+ *
+ * Provides fast in-memory caching with automatic version validation.
+ * Namespaced by baseDir hash to support multiple trinkets instances.
+ *
+ * @example
+ * ```ts
+ * import { openKvCache } from "@trinkets/core/cache/kv";
+ *
+ * const cache = await openKvCache("trinkets", "./.trinkets");
+ * ```
+ */
+
 import type { GraphState, IssueId } from "./adt.ts";
 import type { Result } from "./result.ts";
 import { err, ok } from "./result.ts";

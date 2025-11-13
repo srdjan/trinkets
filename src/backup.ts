@@ -1,6 +1,18 @@
 /**
+ * @module backup
+ *
  * Backup and restore utilities for operational data management.
- * Provides tools to safely backup, restore, and migrate trinkets data.
+ *
+ * Provides tools to safely backup, restore, and migrate trinkets data with
+ * full metadata and incremental backup support.
+ *
+ * @example
+ * ```ts
+ * import { createBackup, validateBackup } from "@trinkets/core/backup";
+ *
+ * const backup = await createBackup(store);
+ * const isValid = validateBackup(backup);
+ * ```
  */
 
 import type { Event } from "./adt.ts";

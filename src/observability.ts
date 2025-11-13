@@ -1,7 +1,18 @@
 /**
+ * @module observability
+ *
  * Observability and telemetry hooks for production monitoring.
+ *
  * Consumers can implement these interfaces to plug in their own
  * metrics, logging, and tracing systems.
+ *
+ * @example
+ * ```ts
+ * import { instrument, MetricsAggregator } from "@trinkets/core/observability";
+ *
+ * const metrics = new MetricsAggregator();
+ * const wrappedFn = instrument(myFunction, "myOperation", metrics);
+ * ```
  */
 
 import type { Event, GraphState } from "./adt.ts";

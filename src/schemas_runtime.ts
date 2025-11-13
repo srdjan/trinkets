@@ -1,3 +1,26 @@
+/**
+ * @module schemas
+ *
+ * Runtime validation utilities for GraphState and IssueId.
+ *
+ * Provides lightweight validation functions for runtime type checking without
+ * the full valibot schema overhead.
+ *
+ * @example
+ * ```ts
+ * import { validateIssueId, validateGraphState } from "@trinkets/core/schemas";
+ *
+ * if (validateIssueId(id)) {
+ *   // id is IssueId
+ * }
+ *
+ * const result = validateGraphState(data);
+ * if (result.valid) {
+ *   // result.state is GraphState
+ * }
+ * ```
+ */
+
 import type { GraphState, Issue, IssueId, Link } from "./adt.ts";
 
 export type ValidationError = Readonly<{ field: string; reason: string }>;

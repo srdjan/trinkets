@@ -1,3 +1,23 @@
+/**
+ * @module domain
+ *
+ * Core domain logic for event-sourced issue tracking.
+ *
+ * This module provides pure functions for creating and manipulating issues,
+ * links, and the issue graph. All functions are deterministic and side-effect
+ * free, accepting ports for I/O operations.
+ *
+ * @example
+ * ```ts
+ * import { createIssue, addLink, setStatus } from "@trinkets/core/domain";
+ *
+ * const result = await createIssue(store, env, {
+ *   title: "Fix bug",
+ *   priority: 0
+ * });
+ * ```
+ */
+
 import type { Env, StoreError, StorePort } from "./ports.ts";
 import type {
   DepType,

@@ -1,3 +1,21 @@
+/**
+ * @module embed
+ *
+ * High-level embedded SDK for trinkets with automatic caching.
+ *
+ * Provides a convenient API wrapper around domain functions with automatic
+ * graph state caching and cache refresh after mutations.
+ *
+ * @example
+ * ```ts
+ * import { makeTrinkets } from "@trinkets/core/embed";
+ *
+ * const sdk = makeTrinkets({ store, cache });
+ * await sdk.createIssue({ title: "Task", priority: 0 });
+ * const ready = await sdk.ready();
+ * ```
+ */
+
 import type {
   CacheError,
   CachePort,

@@ -1,7 +1,20 @@
 /**
+ * @module integrity
+ *
  * Data integrity verification and repair utilities.
+ *
  * Use these tools to detect corruption, validate data consistency,
- * and repair common issues in production.
+ * and repair common issues in production event logs.
+ *
+ * @example
+ * ```ts
+ * import { verifyIntegrity, repairEvents } from "@trinkets/core/integrity";
+ *
+ * const report = verifyIntegrity(events);
+ * if (report.issues.length > 0) {
+ *   const repaired = repairEvents(events);
+ * }
+ * ```
  */
 
 import type { Event, IssueId } from "./adt.ts";

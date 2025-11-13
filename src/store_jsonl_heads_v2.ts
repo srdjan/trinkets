@@ -1,3 +1,23 @@
+/**
+ * @module stores/heads
+ *
+ * High-performance JSONL store with incremental replay and state caching.
+ *
+ * Tracks byte offsets (heads.json) and snapshots state (state.json) for
+ * sub-millisecond reads via incremental replay. Recommended for production
+ * services and long-lived agents.
+ *
+ * @example
+ * ```ts
+ * import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
+ *
+ * const store = await openJsonlStoreWithHeadsV2({
+ *   baseDir: "./.trinkets",
+ *   validateEvents: true
+ * });
+ * ```
+ */
+
 import { ensureDir } from "@std/fs/ensure-dir";
 import { join } from "@std/path";
 import type { Event, GraphState, Issue, IssueId, Link } from "./adt.ts";

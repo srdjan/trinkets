@@ -1,3 +1,20 @@
+/**
+ * @module search
+ *
+ * Advanced search and filtering for issues with multiple strategies.
+ *
+ * Provides text search, label filtering, and configurable work selection
+ * strategies (priority-first, oldest-first, shortest-title).
+ *
+ * @example
+ * ```ts
+ * import { filterIssues, nextWork } from "@trinkets/core/search";
+ *
+ * const filtered = filterIssues(graph, { label: "bug", text: "auth" });
+ * const next = nextWork(graph, { priorities: [0] }, "priority-first");
+ * ```
+ */
+
 import type { GraphState, Issue } from "./adt.ts";
 import { ready as baseReady } from "./query.ts";
 export type SearchFilter = Readonly<

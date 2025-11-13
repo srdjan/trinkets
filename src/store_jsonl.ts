@@ -1,3 +1,23 @@
+/**
+ * @module stores/jsonl
+ *
+ * Basic JSONL store implementation with full event replay.
+ *
+ * Stores events in separate JSONL files (issues.jsonl, links.jsonl) with
+ * exclusive file locking. Performs full replay on every read. Best for
+ * small repos and rapid prototyping.
+ *
+ * @example
+ * ```ts
+ * import { openJsonlStore } from "@trinkets/core/stores/jsonl";
+ *
+ * const store = await openJsonlStore({
+ *   baseDir: "./.trinkets",
+ *   validateEvents: true
+ * });
+ * ```
+ */
+
 import { ensureDir } from "@std/fs/ensure-dir";
 import { join } from "@std/path";
 import type { Event, GraphState } from "./adt.ts";

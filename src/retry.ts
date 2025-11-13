@@ -1,6 +1,20 @@
 /**
+ * @module retry
+ *
  * Retry utilities for handling transient errors in production.
- * Provides exponential backoff, jitter, and configurable retry strategies.
+ *
+ * Provides exponential backoff, jitter, circuit breaker pattern, and
+ * configurable retry strategies for resilient operations.
+ *
+ * @example
+ * ```ts
+ * import { withRetry, CircuitBreaker } from "@trinkets/core/retry";
+ *
+ * const result = await withRetry(
+ *   () => store.materialize(),
+ *   { maxAttempts: 3, initialDelayMs: 100 }
+ * );
+ * ```
  */
 
 import type { Result } from "./result.ts";

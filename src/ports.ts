@@ -1,3 +1,25 @@
+/**
+ * @module ports
+ *
+ * Port interfaces for dependency injection and adapter implementations.
+ *
+ * Defines the core ports (StorePort, CachePort, Env) that enable testing
+ * and pluggable infrastructure. Also exports all error types used throughout
+ * the library.
+ *
+ * @example
+ * ```ts
+ * import type { StorePort, CachePort } from "@trinkets/core/ports";
+ *
+ * // Implement custom store
+ * const myStore: StorePort = {
+ *   append: async (e) => { ... },
+ *   scan: async () => { ... },
+ *   materialize: async () => { ... }
+ * };
+ * ```
+ */
+
 import type { Event, GraphState } from "./adt.ts";
 import type { Result } from "./result.ts";
 

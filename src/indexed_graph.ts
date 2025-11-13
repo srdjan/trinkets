@@ -1,3 +1,20 @@
+/**
+ * @module indexed
+ *
+ * Indexed graph implementation for O(1) filtered queries.
+ *
+ * Extends GraphState with pre-computed indexes (by status, priority, label)
+ * to dramatically improve query performance from O(N) to O(1).
+ *
+ * @example
+ * ```ts
+ * import { buildIndexes, indexIssueCreated } from "@trinkets/core/indexed";
+ *
+ * const indexed = buildIndexes(graph);
+ * const updated = indexIssueCreated(indexed, newIssue);
+ * ```
+ */
+
 import type { GraphState, Issue, IssueId, IssueStatus } from "./adt.ts";
 
 /**

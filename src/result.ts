@@ -1,3 +1,24 @@
+/**
+ * @module result
+ *
+ * Result type for railway-oriented error handling.
+ *
+ * Provides a type-safe Result<T, E> discriminated union and utility functions
+ * for functional error handling without exceptions.
+ *
+ * @example
+ * ```ts
+ * import { ok, err, andThen, type Result } from "@trinkets/core/result";
+ *
+ * function divide(a: number, b: number): Result<number, string> {
+ *   if (b === 0) return err("Division by zero");
+ *   return ok(a / b);
+ * }
+ *
+ * const result = andThen(divide(10, 2), (n) => ok(n * 2));
+ * ```
+ */
+
 export type Ok<T> = Readonly<{ ok: true; value: T }>;
 export type Err<E> = Readonly<{ ok: false; error: E }>;
 export type Result<T, E> = Ok<T> | Err<E>;

@@ -1,3 +1,20 @@
+/**
+ * @module query
+ *
+ * Graph query operations for finding ready work and analyzing dependencies.
+ *
+ * Provides functions to query the issue graph for ready issues (those with
+ * no open blockers) and explain why an issue is blocked.
+ *
+ * @example
+ * ```ts
+ * import { ready, explainBlocked } from "@trinkets/core/query";
+ *
+ * const readyIssues = ready(graph, { priorities: [0, 1] });
+ * const blocking = explainBlocked(graph, issueId);
+ * ```
+ */
+
 import type { GraphState, Issue, IssueId } from "./adt.ts";
 import { validateIssueId } from "./schemas_runtime.ts";
 
