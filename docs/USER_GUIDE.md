@@ -1,8 +1,8 @@
 # Trinkets — User Guide (App Embedder)
 
-This guide walks you through embedding the library, choosing a store, using
-caching, exposing a read-only HTTP, enabling strict validation, and viewing
-blocked reasons.
+This guide targets Deno v2.5.6+ and walks you through embedding the library,
+choosing a store, using caching, exposing a read-only HTTP surface, enabling
+strict validation, and viewing blocked reasons.
 
 ## 1. Stores
 
@@ -35,11 +35,10 @@ const next = await tr.nextWork({ label: "p0" }, "priority-first");
 ## 4. Modular imports & server wiring
 
 Use the subpath exports to keep server bundles lean and compose your own HTTP
-surface (the older `startHttp` helper has been removed). Example using the Deno
-`serve` API:
+surface (the older `startHttp` helper has been removed). Example using the
+built-in `Deno.serve` API available in Deno v2.5.6:
 
 ```ts
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { makeTrinkets } from "@trinkets/core/embed";
 import { openJsonlStoreWithHeadsV2 } from "@trinkets/core/stores/heads";
 import { openKvCache } from "@trinkets/core/cache/kv";
@@ -50,18 +49,14 @@ const tr = makeTrinkets({ store, cache });
 
 await tr.init();
 
-await serve(async (req) => {
+Deno.serve({ hostname: "0.0.0.0", port: 8787 }, async (req) => {
   const url = new URL(req.url);
   if (url.pathname === "/ready") {
     const readyResult = await tr.ready();
     if (!readyResult.ok) {
-      return new Response(JSON.stringify({ error: readyResult.error }), {
-        status: 500,
-      });
+      return Response.json({ error: readyResult.error }, { status: 500 });
     }
-    return new Response(JSON.stringify(readyResult.value), {
-      headers: { "content-type": "application/json" },
-    });
+    return Response.json(readyResult.value);
   }
   return new Response("ok");
 });

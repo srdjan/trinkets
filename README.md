@@ -13,6 +13,9 @@ issues + links.
 - Ready queue + next-work strategies
 - Deno-first, published to JSR (library code)
 
+> Target runtime: Deno v2.5.6+ where `Deno.serve` and Deno KV are built in—no
+> std/http imports or unstable flags required for the snippets below.
+
 ## Installation
 
 Install from JSR:
@@ -71,17 +74,29 @@ const store = await openJsonlStoreWithHeadsV2({
 const cache = await openKvCache("trinkets", baseDir);
 
 const tr = makeTrinkets({ store, cache });
-await tr.init();
+const initResult = await tr.init();
+if (!initResult.ok) throw initResult.error;
 
-const a = await tr.createIssue({
+const createA = await tr.createIssue({
   title: "Ship login",
   labels: ["p0"],
   priority: 0,
 });
-const b = await tr.createIssue({ title: "Session handling", priority: 1 });
-await tr.addLink(b.id, a.id, "blocks");
+if (!createA.ok) throw createA.error;
 
-console.log(await tr.ready());
+const createB = await tr.createIssue({
+  title: "Session handling",
+  priority: 1,
+});
+if (!createB.ok) throw createB.error;
+
+const linkResult = await tr.addLink(createB.value.id, createA.value.id, "blocks");
+if (!linkResult.ok) throw linkResult.error;
+
+const readyResult = await tr.ready();
+if (!readyResult.ok) throw readyResult.error;
+
+console.log(readyResult.value);
 ```
 
 ## Which Store Should I Use?
@@ -197,11 +212,13 @@ deno run --allow-read --allow-write --allow-env your-script.ts
 
 ### KV Cache Errors
 
-The KV cache requires the unstable KV flag:
+Deno v2.5.6 ships Deno KV as a stable API, so no extra flags are required:
 
 ```bash
-deno run -A --unstable-kv your-script.ts
+deno run -A your-script.ts
 ```
+
+If you are pinned to Deno 1.x for any reason, add `--unstable-kv`.
 
 ### Lock Timeout Errors
 

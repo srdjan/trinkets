@@ -1,6 +1,6 @@
 # Trinkets Examples
 
-This directory contains practical examples demonstrating how to use trinkets for issue tracking and project management.
+This directory contains practical examples demonstrating how to use trinkets for issue tracking and project management. Examples are tested on Deno v2.5.6+.
 
 ## Running Examples
 
@@ -10,11 +10,8 @@ All examples can be run directly with Deno:
 deno run -A examples/<example_name>.ts
 ```
 
-Some examples require the `--unstable-kv` flag for KV store features:
-
-```bash
-deno run -A --unstable-kv examples/production_setup.ts
-```
+> KV is stable in Deno v2.5.6. Only add `--unstable-kv` if you are stuck on
+> an older (1.x) toolchain.
 
 ## Available Examples
 
@@ -75,7 +72,7 @@ deno run -A examples/query_patterns.ts
 **Best for:** Building production-ready applications
 
 ```bash
-deno run -A --unstable-kv examples/production_setup.ts
+deno run -A examples/production_setup.ts
 ```
 
 ### 5. Backup & Restore (`backup_restore.ts`)
@@ -166,7 +163,8 @@ if (state.ok) {
 
 **Permission errors:** Make sure to run with `-A` flag or specify needed permissions
 
-**KV errors:** Some examples require `--unstable-kv` flag for Deno KV features
+**KV errors:** Make sure you're running Deno v2.5.6+ so Deno KV works without
+extra flags; only add `--unstable-kv` if you cannot upgrade yet.
 
 **Import errors:** Run examples from the repository root directory
 

@@ -9,6 +9,15 @@ code in this repository.
 Beads-style event-sourced issue tracker with a dependency graph. Published to
 JSR as `@trinkets/core`.
 
+## Runtime Expectations
+
+- Target Deno v2.5.6+ so `Deno.serve`, `Response.json`, and Deno KV are
+  available without std imports or unstable flags.
+- Prefer built-in APIs (`Deno.serve`, `crypto.subtle`, `structuredClone`) in new
+  examples and documentation updates.
+- When you absolutely must support older toolchains, gate the behavior or note
+  the requirement explicitly in docs/tests.
+
 ## Development Commands
 
 ```bash
