@@ -1,20 +1,17 @@
 {
   "name": "@trinkets/core",
-  "version": "0.0.5",
+  "version": "0.2.0",
   "exports": {
     ".": "./src/index.ts"
   },
   "publish": {
-    "include": [
-      "src/**",
-      "cli/**",
-      "examples/**",
-      "scripts/**",
-      "docs/**",
-      "README.md",
-      "LICENSE",
-      "deno.json",
-      "jsr.json"
+    "exclude": [
+      ".git/**",
+      ".github/**",
+      ".trinkets/**",
+      ".vscode/**",
+      "tests/**",
+      "*_test.ts"
     ]
   }
 }

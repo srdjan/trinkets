@@ -4,7 +4,7 @@
  * metrics, logging, and tracing systems.
  */
 
-import type { Event, GraphState, IssueId } from "./adt.ts";
+import type { Event, GraphState } from "./adt.ts";
 import type { StoreError } from "./ports.ts";
 
 /**

@@ -100,7 +100,9 @@ async function printReady(tr: Trinkets, label: string) {
   const ready = expectOk(await tr.ready(), "ready queue");
   console.log(`📬 ${label}: ${ready.length} stories ready for pickup`);
   for (const issue of ready) {
-    console.log(`  - [${issue.kind}] ${issue.title} (priority ${issue.priority})`);
+    console.log(
+      `  - [${issue.kind}] ${issue.title} (priority ${issue.priority})`,
+    );
   }
   console.log();
 }

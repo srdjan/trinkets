@@ -7,7 +7,7 @@ import {
   parse,
   string,
   union,
-} from "npm:valibot@0.31.0";
+} from "valibot";
 import type { Event } from "./adt.ts";
 export const IssueSchema = object({
   id: string(),

@@ -24,6 +24,7 @@ import { ready } from "./query.ts";
 import { nextWork } from "./search.ts";
 import type { Result } from "./result.ts";
 import { ok } from "./result.ts";
+import { warn } from "./logger.ts";
 
 export type EmbedOptions = Readonly<
   { store: StorePort; cache?: CachePort | null; clock?: () => string }
@@ -163,6 +164,9 @@ export function makeTrinkets(opts: EmbedOptions): Trinkets {
       if (!refreshResult.ok) {
         // Cache refresh failed, but creation succeeded
         // Return success but log the cache error
+        warn("Cache refresh failed after createIssue", {
+          error: refreshResult.error,
+        });
       }
 
       return ok(createResult.value);

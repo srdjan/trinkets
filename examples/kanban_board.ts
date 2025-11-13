@@ -84,7 +84,10 @@ async function main() {
   console.log(`🎯 Next prioritized story: ${next?.title ?? "all clear"}\n`);
 
   // Sync board snapshot to an "external" system (temp JSON file)
-  const snapshotPath = await Deno.makeTempFile({ prefix: "kanban", suffix: ".json" });
+  const snapshotPath = await Deno.makeTempFile({
+    prefix: "kanban",
+    suffix: ".json",
+  });
   const webhook = new FileWebhook(snapshotPath);
   await board.publishSnapshot(webhook);
   console.log(`📡 Snapshot exported to ${snapshotPath}\n`);
@@ -138,7 +141,10 @@ class KanbanBoard {
     input: Parameters<Trinkets["createIssue"]>[0],
     parentKey?: string,
   ) {
-    const issue = expectOk(await this.tr.createIssue(input), `create story ${key}`);
+    const issue = expectOk(
+      await this.tr.createIssue(input),
+      `create story ${key}`,
+    );
     this.stories.set(key, issue);
     if (parentKey) {
       const parent = this.requireStory(parentKey);
@@ -158,7 +164,10 @@ class KanbanBoard {
   async linkDependency(blockedKey: string, blockerKey: string) {
     const blocked = this.requireStory(blockedKey);
     const blocker = this.requireStory(blockerKey);
-    expectOk(await this.tr.addLink(blocked.id, blocker.id, "blocks"), "add dependency");
+    expectOk(
+      await this.tr.addLink(blocked.id, blocker.id, "blocks"),
+      "add dependency",
+    );
   }
 
   async printReady(label: string) {
@@ -181,7 +190,9 @@ class KanbanBoard {
       console.log(`\n${status.toUpperCase()} (${column.length})`);
       for (const issue of column) {
         const blockers = describeBlockers(graph, issue);
-        console.log(`  • ${issue.title} [${issue.kind}] P${issue.priority}${blockers}`);
+        console.log(
+          `  • ${issue.title} [${issue.kind}] P${issue.priority}${blockers}`,
+        );
       }
     }
     console.log();
@@ -189,7 +200,10 @@ class KanbanBoard {
 
   async publishSnapshot(sink: ExternalSink) {
     const graph = expectOk(await this.tr.getGraph(), "snapshot graph");
-    const next = expectOk(await this.tr.nextWork(undefined, "priority-first"), "snapshot next");
+    const next = expectOk(
+      await this.tr.nextWork(undefined, "priority-first"),
+      "snapshot next",
+    );
     const snapshot = buildBoardSnapshot(graph, next?.title);
     await sink.publish(snapshot);
   }
@@ -293,11 +307,17 @@ class FileWebhook implements ExternalSink {
 
 type KanbanSnapshot = {
   generatedAt: string;
-  statuses: Record<IssueStatus, Array<Pick<Issue, "id" | "title" | "priority" | "kind">>>;
+  statuses: Record<
+    IssueStatus,
+    Array<Pick<Issue, "id" | "title" | "priority" | "kind">>
+  >;
   nextSuggested?: string;
 };
 
-function buildBoardSnapshot(graph: GraphState, nextSuggested?: string): KanbanSnapshot {
+function buildBoardSnapshot(
+  graph: GraphState,
+  nextSuggested?: string,
+): KanbanSnapshot {
   const snapshot: KanbanSnapshot = {
     generatedAt: new Date().toISOString(),
     statuses: {

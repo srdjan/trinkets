@@ -1,5 +1,5 @@
-import { ensureDir } from "jsr:@std/fs@1/ensure-dir";
-import { join } from "jsr:@std/path@1";
+import { ensureDir } from "@std/fs/ensure-dir";
+import { join } from "@std/path";
 import type { Event, GraphState } from "./adt.ts";
 import { materializeFromEvents } from "./domain_materialize.ts";
 import { parseEvent } from "./schemas.ts";

@@ -1,4 +1,4 @@
-import type { GraphState, IssueId } from "./adt.ts";
+import type { GraphState, Issue, IssueId, Link } from "./adt.ts";
 
 export type ValidationError = Readonly<{ field: string; reason: string }>;
 
@@ -90,9 +90,9 @@ export function validateGraphState(
   const incomingArray = d.incoming as Array<[IssueId, unknown]>;
 
   const state: GraphState = {
-    issues: new Map(issuesArray as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-    outgoing: new Map(outgoingArray as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-    incoming: new Map(incomingArray as any), // eslint-disable-line @typescript-eslint/no-explicit-any
+    issues: new Map(issuesArray as Array<[IssueId, Issue]>),
+    outgoing: new Map(outgoingArray as Array<[IssueId, readonly Link[]]>),
+    incoming: new Map(incomingArray as Array<[IssueId, readonly Link[]]>),
   };
 
   return { valid: true, state };

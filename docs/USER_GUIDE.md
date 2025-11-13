@@ -1,18 +1,18 @@
 # Trinkets Embedder Guide (Beads Edition)
 
 This guide is for developers embedding trinkets as a Beads-style event log
-inside their own applications or coding agents. All snippets target Deno
-v2.5.6+ (where KV is stable) and assume you want programmatic control instead of
+inside their own applications or coding agents. All snippets target Deno v2.5.6+
+(where KV is stable) and assume you want programmatic control instead of
 invoking the `tr` CLI.
 
 ## Mental model
 
-1. **Event sourced:** Every change appends an event (`IssueCreated`, `LinkAdded`,
-   etc.) to JSONL files inside your repo.
+1. **Event sourced:** Every change appends an event (`IssueCreated`,
+   `LinkAdded`, etc.) to JSONL files inside your repo.
 2. **Graph-first:** `trinkets.make()` keeps a hydrated graph in memory (and
    optionally cache) so you can query ready work instantly.
-3. **Drop-in:** Stores and caches are simple ports. Swap in JSONL, Heads V2, or a
-   custom implementation without changing the rest of your code.
+3. **Drop-in:** Stores and caches are simple ports. Swap in JSONL, Heads V2, or
+   a custom implementation without changing the rest of your code.
 
 ---
 
@@ -44,12 +44,15 @@ if (ready.ok) {
   console.log("Ready stories", ready.value.map((i) => i.title));
 }
 
-const next = await tr.nextWork({ label: "frontend", priorities: [0, 1] }, "priority-first");
+const next = await tr.nextWork(
+  { label: "frontend", priorities: [0, 1] },
+  "priority-first",
+);
 if (next.ok) console.log("Next focus", next.value?.title);
 ```
 
-`trinkets.make()` initializes the underlying store the first time you call it, so
-the returned SDK is ready for commands immediately.
+`trinkets.make()` initializes the underlying store the first time you call it,
+so the returned SDK is ready for commands immediately.
 
 Key takeaways:
 
@@ -74,9 +77,23 @@ const store = await trinkets.store.heads({ baseDir, validateEvents: true });
 const cache = await trinkets.cache.kv("checkout-squad", baseDir);
 const tr = await trinkets.make({ store, cache });
 
-const api = await tr.createIssue({ title: "Design payment API", kind: "feature", priority: 0 });
-const ui = await tr.createIssue({ title: "Responsive checkout UI", kind: "feature", priority: 1, labels: ["ux"] });
-const qa = await tr.createIssue({ title: "Checkout regression suite", kind: "chore", priority: 2, labels: ["qa"] });
+const api = await tr.createIssue({
+  title: "Design payment API",
+  kind: "feature",
+  priority: 0,
+});
+const ui = await tr.createIssue({
+  title: "Responsive checkout UI",
+  kind: "feature",
+  priority: 1,
+  labels: ["ux"],
+});
+const qa = await tr.createIssue({
+  title: "Checkout regression suite",
+  kind: "chore",
+  priority: 2,
+  labels: ["qa"],
+});
 
 await tr.addLink(ui.value.id, api.value.id, "blocks"); // UI waits on API
 await tr.addLink(api.value.id, qa.value.id, "parent-child"); // QA rolls up to API epic
@@ -146,8 +163,13 @@ Pair the store with either the built-in KV/SQLite cache or roll your own:
 ```ts
 class MemoryCache implements CachePort {
   private snapshot: GraphState | null = null;
-  async hydrate() { return ok(this.snapshot); }
-  async persist(g: GraphState) { this.snapshot = g; return ok(undefined); }
+  async hydrate() {
+    return ok(this.snapshot);
+  }
+  async persist(g: GraphState) {
+    this.snapshot = g;
+    return ok(undefined);
+  }
 }
 ```
 
@@ -210,11 +232,11 @@ The advanced script guides you through the end-to-end use case:
 
 ## Scenario matrix
 
-| Stage        | File                                 | Purpose |
-| ------------ | ------------------------------------ | ------- |
-| Basic        | `examples/basic_embed.ts`            | Minimal embed + ready queue |
-| Intermediate | `examples/intermediate_dependencies.ts` | Dependencies + filtering |
-| Advanced     | `examples/kanban_board.ts`           | Custom store, caching, webhook sync |
+| Stage        | File                                    | Purpose                             |
+| ------------ | --------------------------------------- | ----------------------------------- |
+| Basic        | `examples/basic_embed.ts`               | Minimal embed + ready queue         |
+| Intermediate | `examples/intermediate_dependencies.ts` | Dependencies + filtering            |
+| Advanced     | `examples/kanban_board.ts`              | Custom store, caching, webhook sync |
 
 Use these scripts as starting points or copy/paste snippets directly into your
 agent/worker environment.

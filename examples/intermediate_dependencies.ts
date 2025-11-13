@@ -159,7 +159,9 @@ async function showReady(label: string, tr: Trinkets) {
   console.log(`📮 ${label}: ${ready.length} ready stories`);
   for (const story of ready) {
     console.log(
-      `  - ${story.title} [${story.kind}] (priority ${story.priority}) labels=${story.labels.join(", ")}`,
+      `  - ${story.title} [${story.kind}] (priority ${story.priority}) labels=${
+        story.labels.join(", ")
+      }`,
     );
   }
   console.log();

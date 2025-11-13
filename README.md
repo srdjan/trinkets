@@ -76,14 +76,15 @@ const tr = await trinkets.make({
 
 ## Usage patterns & runnable examples
 
-| Level        | Scenario                                                               | File                                           | Highlights |
-| ------------ | ---------------------------------------------------------------------- | ---------------------------------------------- | ---------- |
-| **Basic**    | Create issues, update status, inspect the ready queue                  | `examples/basic_embed.ts`                      | `await trinkets.make()` intro |
-| **Intermediate** | Model blocks/parent-child links, filter work, use the ready queue    | `examples/intermediate_dependencies.ts`        | Heads V2 store + KV cache + swim lanes |
-| **Advanced** | Custom store, cache, projection, and Kanban board export               | `examples/kanban_board.ts`                     | Event sourcing + external snapshot |
+| Level            | Scenario                                                          | File                                    | Highlights                             |
+| ---------------- | ----------------------------------------------------------------- | --------------------------------------- | -------------------------------------- |
+| **Basic**        | Create issues, update status, inspect the ready queue             | `examples/basic_embed.ts`               | `await trinkets.make()` intro          |
+| **Intermediate** | Model blocks/parent-child links, filter work, use the ready queue | `examples/intermediate_dependencies.ts` | Heads V2 store + KV cache + swim lanes |
+| **Advanced**     | Custom store, cache, projection, and Kanban board export          | `examples/kanban_board.ts`              | Event sourcing + external snapshot     |
 
-Run any script with `deno run -A <file>` (or `deno task demo` for the basic walkthrough) — the examples directory is
-self-contained and doubles as canonical templates for your own agents.
+Run any script with `deno run -A <file>` (or `deno task demo` for the basic
+walkthrough) — the examples directory is self-contained and doubles as canonical
+templates for your own agents.
 
 ## Kanban board use case
 
@@ -107,28 +108,70 @@ hydrate a UI framework of your choice.
 
 ## Stores & caches
 
-| Store implementation              | When to use                                                  | Notes |
-| --------------------------------- | ------------------------------------------------------------ | ----- |
-| `trinkets.store.jsonl()`          | Small repos, local scripts, rapid prototyping                | Simplest setup, full replay on read |
-| `trinkets.store.heads()`          | Services, dashboards, long-lived agents                      | Tracks byte offsets + snapshots for sub-ms reads |
+| Store implementation                      | When to use                                                  | Notes                                             |
+| ----------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------- |
+| `trinkets.store.jsonl()`                  | Small repos, local scripts, rapid prototyping                | Simplest setup, full replay on read               |
+| `trinkets.store.heads()`                  | Services, dashboards, long-lived agents                      | Tracks byte offsets + snapshots for sub-ms reads  |
 | Custom `StorePort` (see advanced example) | Specialized deployments (in-memory, remote KV, multi-region) | Implement `StorePort` + hand to `trinkets.make()` |
 
 Pair any store with a cache port (`trinkets.cache.kv`, `trinkets.cache.sqlite`,
-or disable caching via `cache: null`) to
-hydrate graphs instantly while keeping the underlying event log append-only.
+or disable caching via `cache: null`) to hydrate graphs instantly while keeping
+the underlying event log append-only.
 
 ## Performance snapshot
 
 | Operation                       | JSONL Store | Heads V2 Store | Speedup |
 | ------------------------------- | ----------- | -------------- | ------- |
 | Initial materialize (1K issues) | ~50ms       | ~50ms          | 1x      |
-| Subsequent materialize         | ~50ms       | <1ms           | 50x+    |
+| Subsequent materialize          | ~50ms       | <1ms           | 50x+    |
 | Append event                    | ~5ms        | ~5ms           | 1x      |
 | Ready queue query               | O(N)        | O(new events)  | 10–100x |
 
+## Security considerations
+
+### baseDir path safety
+
+When creating a Trinkets instance, you control the `baseDir` parameter that
+determines where issue data is stored:
+
+```ts
+const tr = await trinkets.make({ baseDir: "./my-issues" });
+```
+
+**Important:** The `baseDir` path is **not sandboxed** by default. trinkets will
+create and write files to whatever directory you specify. This design provides
+flexibility for production deployments, but requires responsible usage:
+
+- **Validate user input**: Never pass unsanitized user input as `baseDir`
+- **Use absolute paths in production**: Avoid relative paths that could be
+  influenced by `cwd` changes
+- **Restrict file system permissions**: Run with minimal necessary permissions
+  (e.g., Deno's `--allow-read` and `--allow-write` flags scoped to specific
+  directories)
+- **Review the path before initialization**: Confirm the directory location is
+  correct before calling `trinkets.make()`
+
+For CLI applications, the trinkets CLI uses the `TRINKETS_DIR` environment
+variable (defaulting to `./.trinkets`) which should be treated as a trusted
+configuration source.
+
+### Event validation
+
+Enable `validateEvents: true` (the default) to ensure all persisted events
+conform to valibot schemas. This prevents malformed data from corrupting your
+issue graph:
+
+```ts
+const tr = await trinkets.make({ validateEvents: true });
+```
+
+Only disable validation in trusted, performance-critical scenarios where you
+control all event sources.
+
 ## API reference
 
-Complete API docs live on JSR: **[https://jsr.io/@trinkets/core/doc](https://jsr.io/@trinkets/core/doc)**
+Complete API docs live on JSR:
+**[https://jsr.io/@trinkets/core/doc](https://jsr.io/@trinkets/core/doc)**
 
 Key modules:
 

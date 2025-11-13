@@ -1,3 +1,21 @@
+/**
+ * @module @trinkets/core
+ *
+ * Trinkets - A light-functional event-sourced issue tracker with dependency graphs.
+ *
+ * This module provides the main entry point for the Trinkets library, exposing:
+ * - `trinkets.make()` - High-level SDK with smart defaults
+ * - `trinkets.domain` - Pure domain functions for event sourcing
+ * - `trinkets.query` - Graph queries (ready issues, blocking explanations)
+ * - `trinkets.store` - Pluggable persistence adapters (JSONL, HeadsV2)
+ * - `trinkets.cache` - Optional caching layers (KV, SQLite)
+ * - `trinkets.infra` - Production utilities (retry, observability, backup)
+ *
+ * All types are re-exported for convenience.
+ *
+ * @see {@link https://jsr.io/@trinkets/core} for full documentation
+ */
+
 import { makeTrinkets } from "./embed.ts";
 import type { EmbedOptions, Trinkets } from "./embed.ts";
 import { openJsonlStore } from "./store_jsonl.ts";
@@ -14,10 +32,7 @@ import {
 } from "./domain.ts";
 import { explainBlocked, ready } from "./query.ts";
 import { filterIssues, nextWork } from "./search.ts";
-import {
-  buildIndexes,
-  indexIssueCreated,
-} from "./indexed_graph.ts";
+import { buildIndexes, indexIssueCreated } from "./indexed_graph.ts";
 import {
   byLabel,
   byPriority,
@@ -51,10 +66,7 @@ import {
   verifyIntegrity,
 } from "./integrity.ts";
 import { newIssueId } from "./id.ts";
-import {
-  validateGraphState,
-  validateIssueId,
-} from "./schemas_runtime.ts";
+import { validateGraphState, validateIssueId } from "./schemas_runtime.ts";
 import type {
   DepType,
   Event,
@@ -101,32 +113,66 @@ import {
 } from "./result.ts";
 import type { Err, Ok, Result } from "./result.ts";
 
+/**
+ * Configuration options for creating a Trinkets instance.
+ */
 export type TrinketsMakeOptions = Readonly<{
+  /** Custom store implementation (defaults to HeadsV2 JSONL store) */
   store?: StorePort;
+  /** Cache implementation or null to disable caching (defaults to KV cache) */
   cache?: CachePort | null;
+  /** Directory for issue storage (defaults to ".trinkets") */
   baseDir?: string;
+  /** Cache namespace identifier (defaults to "trinkets") */
   cacheName?: string;
+  /** Enable event validation with valibot schemas (defaults to true) */
   validateEvents?: boolean;
+  /** Custom clock function for deterministic timestamps */
   clock?: () => string;
+  /** Automatically initialize repository if not exists (defaults to true) */
   autoInit?: boolean;
 }>;
 
+/**
+ * Creates a Trinkets SDK instance with smart defaults.
+ *
+ * @example
+ * ```ts
+ * // Use defaults (HeadsV2 store + KV cache)
+ * const sdk = await trinkets.make();
+ *
+ * // Custom configuration
+ * const sdk = await trinkets.make({
+ *   baseDir: "./my-issues",
+ *   validateEvents: true,
+ *   autoInit: false
+ * });
+ *
+ * // Create an issue
+ * const result = await sdk.createIssue({
+ *   title: "Fix authentication bug",
+ *   priority: 0
+ * });
+ * ```
+ *
+ * @param opts - Configuration options
+ * @returns Promise resolving to Trinkets SDK instance
+ * @throws {StoreError} When autoInit is true and initialization fails
+ */
 async function make(opts: TrinketsMakeOptions = {}): Promise<Trinkets> {
   const baseDir = opts.baseDir ?? ".trinkets";
   const validateEvents = opts.validateEvents ?? true;
   const cacheName = opts.cacheName ?? "trinkets";
 
-  const store =
-    opts.store ??
+  const store = opts.store ??
     await openJsonlStoreWithHeadsV2({
       baseDir,
       validateEvents,
     });
 
-  const resolvedCache: CachePort | null | undefined =
-    opts.cache === undefined
-      ? await openKvCache(cacheName, baseDir)
-      : opts.cache;
+  const resolvedCache: CachePort | null | undefined = opts.cache === undefined
+    ? await openKvCache(cacheName, baseDir)
+    : opts.cache;
 
   const embedOptions: EmbedOptions = {
     store,
@@ -146,6 +192,36 @@ async function make(opts: TrinketsMakeOptions = {}): Promise<Trinkets> {
   return instance;
 }
 
+/**
+ * The main Trinkets namespace providing access to all library functionality.
+ *
+ * @remarks
+ * Trinkets is an event-sourced issue tracker with dependency graphs, built on
+ * Light Functional Programming principles. All operations return Result types
+ * for predictable error handling.
+ *
+ * @example
+ * ```ts
+ * import { trinkets } from "@trinkets/core";
+ *
+ * // Create SDK instance
+ * const sdk = await trinkets.make();
+ *
+ * // Create and link issues
+ * const bug = await sdk.createIssue({ title: "Fix bug", priority: 0 });
+ * const feature = await sdk.createIssue({ title: "Add feature", priority: 1 });
+ *
+ * if (bug.ok && feature.ok) {
+ *   await sdk.addLink(feature.value.id, bug.value.id, "blocks");
+ * }
+ *
+ * // Query ready work
+ * const readyResult = await sdk.ready();
+ * if (readyResult.ok) {
+ *   console.log("Ready issues:", readyResult.value);
+ * }
+ * ```
+ */
 export const trinkets = {
   make,
   embed: makeTrinkets,
@@ -239,11 +315,11 @@ export type {
   ConnectionError,
   CorruptionError,
   DepType,
-  Event,
   DiskFullError,
   EmbedOptions,
   Env,
   Err,
+  Event,
   GraphState,
   IndexedGraphState,
   IntegrityIssue,

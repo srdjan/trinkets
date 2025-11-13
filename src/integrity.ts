@@ -4,9 +4,9 @@
  * and repair common issues in production.
  */
 
-import type { Event, GraphState, IssueId } from "./adt.ts";
+import type { Event, IssueId } from "./adt.ts";
 import type { Result } from "./result.ts";
-import { err, ok } from "./result.ts";
+import { ok } from "./result.ts";
 import { materializeFromEvents } from "./domain_materialize.ts";
 import { validateInvariants } from "./domain.ts";
 import { validateIssueId } from "./schemas_runtime.ts";

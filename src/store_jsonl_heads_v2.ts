@@ -1,6 +1,6 @@
-import { ensureDir } from "jsr:@std/fs@1/ensure-dir";
-import { join } from "jsr:@std/path@1";
-import type { Event, GraphState, IssueId } from "./adt.ts";
+import { ensureDir } from "@std/fs/ensure-dir";
+import { join } from "@std/path";
+import type { Event, GraphState, Issue, IssueId, Link } from "./adt.ts";
 import { applyEvent, materializeFromEvents } from "./domain_materialize.ts";
 import { parseEvent } from "./schemas.ts";
 import type { Result } from "./result.ts";
@@ -506,9 +506,9 @@ async function readState(
     }
 
     const state: GraphState = {
-      issues: new Map(raw.issues as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-      outgoing: new Map(raw.outgoing as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-      incoming: new Map(raw.incoming as any), // eslint-disable-line @typescript-eslint/no-explicit-any
+      issues: new Map(raw.issues as Array<[IssueId, Issue]>),
+      outgoing: new Map(raw.outgoing as Array<[IssueId, readonly Link[]]>),
+      incoming: new Map(raw.incoming as Array<[IssueId, readonly Link[]]>),
     };
 
     return ok(state);

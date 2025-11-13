@@ -105,31 +105,35 @@ Deno.test("Store - initRepo returns Ok on success", testOptions, async () => {
   }
 });
 
-Deno.test("Store - createIssue returns Ok with issue", testOptions, async () => {
-  const tempDir = await Deno.makeTempDir();
-  try {
-    const store = await openJsonlStore({ baseDir: tempDir });
-    const env = { now: () => "2024-01-01T00:00:00.000Z" };
+Deno.test(
+  "Store - createIssue returns Ok with issue",
+  testOptions,
+  async () => {
+    const tempDir = await Deno.makeTempDir();
+    try {
+      const store = await openJsonlStore({ baseDir: tempDir });
+      const env = { now: () => "2024-01-01T00:00:00.000Z" };
 
-    await initRepo(store);
+      await initRepo(store);
 
-    const result = await createIssue(store, env, {
-      title: "Test Issue",
-      priority: 0,
-      labels: ["test"],
-    });
+      const result = await createIssue(store, env, {
+        title: "Test Issue",
+        priority: 0,
+        labels: ["test"],
+      });
 
-    assertEquals(result.ok, true);
-    if (result.ok) {
-      assertEquals(result.value.title, "Test Issue");
-      assertEquals(result.value.priority, 0);
-      assertExists(result.value.id);
-      assertEquals(result.value.id.startsWith("bd-"), true);
+      assertEquals(result.ok, true);
+      if (result.ok) {
+        assertEquals(result.value.title, "Test Issue");
+        assertEquals(result.value.priority, 0);
+        assertExists(result.value.id);
+        assertEquals(result.value.id.startsWith("bd-"), true);
+      }
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
     }
-  } finally {
-    await Deno.remove(tempDir, { recursive: true });
-  }
-});
+  },
+);
 
 Deno.test("Store - scan returns events in Result", testOptions, async () => {
   const tempDir = await Deno.makeTempDir();
@@ -151,43 +155,51 @@ Deno.test("Store - scan returns events in Result", testOptions, async () => {
   }
 });
 
-Deno.test("Store - materialize returns GraphState in Result", testOptions, async () => {
-  const tempDir = await Deno.makeTempDir();
-  try {
-    const store = await openJsonlStore({ baseDir: tempDir });
-    const env = { now: () => "2024-01-01T00:00:00.000Z" };
+Deno.test(
+  "Store - materialize returns GraphState in Result",
+  testOptions,
+  async () => {
+    const tempDir = await Deno.makeTempDir();
+    try {
+      const store = await openJsonlStore({ baseDir: tempDir });
+      const env = { now: () => "2024-01-01T00:00:00.000Z" };
 
-    const createResult = await createIssue(store, env, { title: "Test" });
-    assertEquals(createResult.ok, true);
+      const createResult = await createIssue(store, env, { title: "Test" });
+      assertEquals(createResult.ok, true);
 
-    const matResult = await store.materialize();
-    assertEquals(matResult.ok, true);
-    if (matResult.ok) {
-      assertEquals(matResult.value.issues.size, 1);
+      const matResult = await store.materialize();
+      assertEquals(matResult.ok, true);
+      if (matResult.ok) {
+        assertEquals(matResult.value.issues.size, 1);
+      }
+    } finally {
+      await Deno.remove(tempDir, { recursive: true });
     }
-  } finally {
-    await Deno.remove(tempDir, { recursive: true });
-  }
-});
+  },
+);
 
-Deno.test("Store - append returns error on invalid path", testOptions, async () => {
-  const tempDir = await Deno.makeTempDir();
-  await Deno.remove(tempDir, { recursive: true }); // Remove the directory
+Deno.test(
+  "Store - append returns error on invalid path",
+  testOptions,
+  async () => {
+    const tempDir = await Deno.makeTempDir();
+    await Deno.remove(tempDir, { recursive: true }); // Remove the directory
 
-  try {
-    const store = await openJsonlStore({
-      baseDir: "/nonexistent/path/that/does/not/exist",
-    });
-    const env = { now: () => "2024-01-01T00:00:00.000Z" };
+    try {
+      const store = await openJsonlStore({
+        baseDir: "/nonexistent/path/that/does/not/exist",
+      });
+      const env = { now: () => "2024-01-01T00:00:00.000Z" };
 
-    const result = await createIssue(store, env, { title: "Test" });
+      const result = await createIssue(store, env, { title: "Test" });
 
-    // Should return an error Result
-    assertEquals(result.ok, false);
-    if (!result.ok) {
-      assertExists(result.error._type);
+      // Should return an error Result
+      assertEquals(result.ok, false);
+      if (!result.ok) {
+        assertExists(result.error._type);
+      }
+    } catch {
+      // Expected - directory doesn't exist
     }
-  } catch {
-    // Expected - directory doesn't exist
-  }
-});
+  },
+);

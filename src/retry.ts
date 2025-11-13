@@ -127,7 +127,7 @@ export async function withRetry<T>(
  * Retry a batch of operations in parallel with individual retry logic.
  * Returns results for all operations, with retries applied per-operation.
  */
-export async function withRetryBatch<T>(
+export function withRetryBatch<T>(
   operations: ReadonlyArray<() => Promise<Result<T, StoreError>>>,
   options?: RetryOptions,
 ): Promise<ReadonlyArray<Result<T, StoreError>>> {
